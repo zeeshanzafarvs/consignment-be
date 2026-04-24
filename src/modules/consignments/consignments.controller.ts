@@ -228,6 +228,40 @@ class UpdateConsignmentDto {
   payment?: UpdatePaymentDto;
 }
 
+class DeliverConsignmentDto {
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  warehouse?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  labor?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  misc?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  paidAmount?: number;
+
+  @IsString()
+  @IsOptional()
+  paymentMethod?: string;
+
+  @IsString()
+  @IsOptional()
+  receiverName?: string;
+
+  @IsString()
+  @IsOptional()
+  remarks?: string;
+}
+
 @ApiTags('Consignments')
 @Controller('consignments')
 @ApiBearerAuth()
@@ -329,5 +363,27 @@ export class ConsignmentsController {
   async cancel(@Param('id') id: string) {
     const consignment = await this.consignmentsService.cancel(id);
     return ApiResponseHelper.updated(consignment, 'Consignment cancelled successfully');
+  }
+
+  @Post(':id/deliver')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @ApiOperation({ summary: 'Deliver consignment' })
+  @ApiResponse({ status: 200, description: 'Consignment delivered successfully' })
+  async deliver(@Param('id') id: string, @Body() dto: DeliverConsignmentDto) {
+    const consignment = await this.consignmentsService.deliver(id, dto);
+    return ApiResponseHelper.updated(consignment, 'Consignment delivered successfully');
+  }
+
+  @Get('delivery/search')
+  @ApiOperation({ summary: 'Search consignment for delivery' })
+  @ApiResponse({ status: 200, description: 'Consignment retrieved successfully' })
+  @ApiQuery({ name: 'biltyNumber', required: true })
+  @ApiQuery({ name: 'receiverPhone', required: false })
+  async searchForDelivery(
+    @Query('biltyNumber') biltyNumber: string,
+    @Query('receiverPhone') receiverPhone?: string,
+  ) {
+    const consignment = await this.consignmentsService.searchForDelivery(biltyNumber, receiverPhone);
+    return ApiResponseHelper.success(consignment);
   }
 }

@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiForbiddenResponse } from '@nestjs/swagger';
-import { IsString, IsOptional, IsDateString, IsEnum } from 'class-validator';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiForbiddenResponse, ApiQuery } from '@nestjs/swagger';
+import { IsString, IsOptional, IsArray, IsUUID } from 'class-validator';
 import { DispatchManifestsService } from './dispatch-manifests.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -11,38 +11,26 @@ import { ApiResponseHelper } from '../../common/helpers/api-response.helper';
 
 class CreateManifestDto {
   @IsString()
-  @IsOptional()
-  vehicleId?: string;
+  vehicleId: string;
+
+  @IsString()
+  driverId: string;
+
+  @IsString()
+  fromBranchId: string;
+
+  @IsString()
+  toBranchId: string;
 
   @IsString()
   @IsOptional()
-  driverId?: string;
-
-  @IsString()
-  @IsOptional()
-  fromBranchId?: string;
-
-  @IsString()
-  @IsOptional()
-  toBranchId?: string;
+  departureTime?: string;
 }
 
-class UpdateManifestDto {
-  @IsString()
-  @IsOptional()
-  vehicleId?: string;
-
-  @IsString()
-  @IsOptional()
-  driverId?: string;
-
-  @IsString()
-  @IsOptional()
-  fromBranchId?: string;
-
-  @IsString()
-  @IsOptional()
-  toBranchId?: string;
+class AddItemsDto {
+  @IsArray()
+  @IsUUID('4', { each: true })
+  consignmentIds: string[];
 }
 
 @ApiTags('DispatchManifests')
@@ -53,63 +41,106 @@ export class DispatchManifestsController {
   constructor(private manifestsService: DispatchManifestsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all manifests' })
+  @ApiOperation({ summary: 'Get all manifests with filters' })
   @ApiResponse({ status: 200, description: 'Manifests retrieved successfully' })
-  async findAll() {
-    const manifests = await this.manifestsService.findAll();
-    return ApiResponseHelper.success(manifests);
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'vehicleId', required: false })
+  @ApiQuery({ name: 'driverId', required: false })
+  @ApiQuery({ name: 'fromBranchId', required: false })
+  @ApiQuery({ name: 'toBranchId', required: false })
+  @ApiQuery({ name: 'dateFrom', required: false })
+  @ApiQuery({ name: 'dateTo', required: false })
+  async findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: ManifestStatus,
+    @Query('vehicleId') vehicleId?: string,
+    @Query('driverId') driverId?: string,
+    @Query('fromBranchId') fromBranchId?: string,
+    @Query('toBranchId') toBranchId?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    const result = await this.manifestsService.findAll(
+      {
+        status,
+        vehicleId,
+        driverId,
+        fromBranchId,
+        toBranchId,
+        dateFrom,
+        dateTo,
+      },
+      {
+        page: page ? parseInt(page) : 1,
+        limit: limit ? parseInt(limit) : 10,
+      },
+    );
+    return ApiResponseHelper.success(result);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get manifest by ID' })
+  @ApiOperation({ summary: 'Get manifest by ID with items and totals' })
   @ApiResponse({ status: 200, description: 'Manifest retrieved successfully' })
   async findOne(@Param('id') id: string) {
-    const manifest = await this.manifestsService.findOne(id);
-    return ApiResponseHelper.success(manifest);
-  }
-
-  @Get('status/:status')
-  @ApiOperation({ summary: 'Get manifests by status' })
-  @ApiResponse({ status: 200, description: 'Manifests retrieved successfully' })
-  async findByStatus(@Param('status') status: ManifestStatus) {
-    const manifests = await this.manifestsService.findByStatus(status);
-    return ApiResponseHelper.success(manifests);
+    const result = await this.manifestsService.findOneWithItems(id);
+    return ApiResponseHelper.success(result);
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Create new manifest' })
   @ApiResponse({ status: 201, description: 'Manifest created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
-  async create(@Body() dto: CreateManifestDto) {
-    const manifest = await this.manifestsService.create(dto);
-    return ApiResponseHelper.created(manifest);
+  async create(@Request() req: any, @Body() dto: CreateManifestDto) {
+    const manifest = await this.manifestsService.create(dto, req.user?.id);
+    return ApiResponseHelper.created(manifest, 'Manifest created successfully');
   }
 
-  @Patch(':id')
+  @Post(':id/items')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @ApiOperation({ summary: 'Add consignment items to manifest' })
+  @ApiResponse({ status: 201, description: 'Items added successfully' })
+  async addItems(@Param('id') id: string, @Body() dto: AddItemsDto) {
+    const items = await this.manifestsService.addItems(id, dto);
+    return ApiResponseHelper.created(items, 'Items added successfully');
+  }
+
+  @Delete(':id/items/:itemId')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @ApiOperation({ summary: 'Remove item from manifest' })
+  @ApiResponse({ status: 200, description: 'Item removed successfully' })
+  async removeItem(@Param('id') id: string, @Param('itemId') itemId: string) {
+    await this.manifestsService.removeItem(id, itemId);
+    return ApiResponseHelper.deleted('Item removed successfully');
+  }
+
+  @Patch(':id/dispatch')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @ApiOperation({ summary: 'Dispatch manifest' })
+  @ApiResponse({ status: 200, description: 'Manifest dispatched successfully' })
+  async dispatch(@Param('id') id: string) {
+    const manifest = await this.manifestsService.dispatch(id);
+    return ApiResponseHelper.updated(manifest, 'Manifest dispatched successfully');
+  }
+
+  @Patch(':id/arrive')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @ApiOperation({ summary: 'Mark manifest as arrived' })
+  @ApiResponse({ status: 200, description: 'Manifest arrived successfully' })
+  async arrive(@Param('id') id: string) {
+    const manifest = await this.manifestsService.arrive(id);
+    return ApiResponseHelper.updated(manifest, 'Manifest arrived successfully');
+  }
+
+  @Patch(':id/close')
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Update manifest' })
-  @ApiResponse({ status: 200, description: 'Manifest updated successfully' })
-  async update(@Param('id') id: string, @Body() dto: UpdateManifestDto) {
-    const manifest = await this.manifestsService.update(id, dto);
-    return ApiResponseHelper.updated(manifest);
-  }
-
-  @Patch(':id/status')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Update manifest status' })
-  @ApiResponse({ status: 200, description: 'Manifest status updated successfully' })
-  async updateStatus(@Param('id') id: string, @Body('status') status: ManifestStatus) {
-    const manifest = await this.manifestsService.updateStatus(id, status);
-    return ApiResponseHelper.updated(manifest);
-  }
-
-  @Delete(':id')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Delete manifest' })
-  @ApiResponse({ status: 200, description: 'Manifest deleted successfully' })
-  async remove(@Param('id') id: string) {
-    await this.manifestsService.remove(id);
-    return ApiResponseHelper.deleted();
+  @ApiOperation({ summary: 'Close manifest' })
+  @ApiResponse({ status: 200, description: 'Manifest closed successfully' })
+  async close(@Param('id') id: string) {
+    const manifest = await this.manifestsService.close(id);
+    return ApiResponseHelper.updated(manifest, 'Manifest closed successfully');
   }
 }

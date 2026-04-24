@@ -83,6 +83,16 @@ export interface UpdateConsignmentDto {
   };
 }
 
+export interface DeliverConsignmentDto {
+  warehouse?: number;
+  labor?: number;
+  misc?: number;
+  paidAmount?: number;
+  paymentMethod?: string;
+  receiverName?: string;
+  remarks?: string;
+}
+
 @Injectable()
 export class ConsignmentsService {
   constructor(
@@ -347,6 +357,87 @@ export class ConsignmentsService {
     consignment.status = ConsignmentStatus.CANCELLED;
     await this.consignmentRepository.save(consignment);
     return this.findOne(id);
+  }
+
+  async deliver(id: string, dto: DeliverConsignmentDto): Promise<Consignment> {
+    const consignment = await this.findOne(id);
+
+    if (consignment.status === ConsignmentStatus.CANCELLED) {
+      throw new BadRequestException('Cannot deliver cancelled consignment');
+    }
+    if (consignment.status === ConsignmentStatus.DELIVERED) {
+      throw new BadRequestException('Consignment is already delivered');
+    }
+
+    const additionalWarehouse = dto.warehouse ?? 0;
+    const additionalLabor = dto.labor ?? 0;
+    const additionalMisc = dto.misc ?? 0;
+
+    consignment.warehouse = Number(consignment.warehouse) + additionalWarehouse;
+    consignment.labor = Number(consignment.labor) + additionalLabor;
+    consignment.misc = Number(consignment.misc) + additionalMisc;
+
+    consignment.totalAmount =
+      Number(consignment.fare) +
+      Number(consignment.loading) +
+      Number(consignment.unloading) +
+      Number(consignment.labor) +
+      Number(consignment.warehouse) +
+      Number(consignment.misc) +
+      Number(consignment.stTax) +
+      Number(consignment.ttTax);
+
+    const additionalPaidAmount = dto.paidAmount ?? 0;
+    consignment.paidAmount = Number(consignment.paidAmount) + additionalPaidAmount;
+    consignment.remainingAmount = Number(consignment.totalAmount) - Number(consignment.paidAmount);
+
+    if (consignment.remainingAmount <= 0) {
+      consignment.paymentStatus = PaymentStatus.PAID;
+    } else if (Number(consignment.paidAmount) > 0) {
+      consignment.paymentStatus = PaymentStatus.PARTIAL;
+    } else {
+      consignment.paymentStatus = PaymentStatus.TO_PAY;
+    }
+
+    consignment.status = ConsignmentStatus.DELIVERED;
+    consignment.deliveredAt = new Date();
+
+    await this.consignmentRepository.save(consignment);
+
+    if (additionalPaidAmount > 0) {
+      const payment = this.paymentRepository.create({
+        consignmentId: consignment.id,
+        amount: additionalPaidAmount,
+        type: PaymentType.DELIVERY,
+        method: dto.paymentMethod as any || 'CASH',
+      });
+      await this.paymentRepository.save(payment);
+    }
+
+    return this.findOne(id);
+  }
+
+  async searchForDelivery(biltyNumber: string, receiverPhone?: string): Promise<Consignment> {
+    const queryBuilder = this.consignmentRepository
+      .createQueryBuilder('consignment')
+      .leftJoinAndSelect('consignment.sender', 'sender')
+      .leftJoinAndSelect('consignment.receiver', 'receiver')
+      .leftJoinAndSelect('consignment.fromBranch', 'fromBranch')
+      .leftJoinAndSelect('consignment.toBranch', 'toBranch')
+      .leftJoinAndSelect('consignment.fromCity', 'fromCity')
+      .leftJoinAndSelect('consignment.toCity', 'toCity')
+      .leftJoinAndSelect('consignment.itemType', 'itemType')
+      .where('consignment.biltyNumber = :biltyNumber', { biltyNumber });
+
+    if (receiverPhone) {
+      queryBuilder.andWhere('receiver.phone = :phone', { phone: receiverPhone });
+    }
+
+    const consignment = await queryBuilder.getOne();
+    if (!consignment) {
+      throw new NotFoundException('Consignment not found');
+    }
+    return consignment;
   }
 
   private async generateBiltyNumber(): Promise<string> {
