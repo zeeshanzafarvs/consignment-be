@@ -78,7 +78,13 @@ export class DispatchManifestsController {
         limit: limit ? parseInt(limit) : 10,
       },
     );
-    return ApiResponseHelper.success(result);
+    return ApiResponseHelper.paginated(
+      result.data,
+      result.total,
+      result.page,
+      result.limit,
+      'Manifests retrieved successfully',
+    );
   }
 
   @Get(':id')

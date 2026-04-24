@@ -4,8 +4,13 @@ import { Repository, Like } from 'typeorm';
 import { Consignment } from './entities/consignment.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { Payment } from '../payments/entities/payment.entity';
-import { ConsignmentStatus, PaymentStatus, PaymentType } from '../../common/enums/status.enum';
+import { ConsignmentStatus, PaymentStatus, PaymentType, PaymentMethod } from '../../common/enums/status.enum';
 import { User } from '../users/entities/user.entity';
+
+export enum CustomerType {
+  SENDER = 'SENDER',
+  RECEIVER = 'RECEIVER',
+}
 
 export interface ConsignmentFilters {
   biltyNumber?: string;
@@ -206,7 +211,7 @@ export class ConsignmentsService {
         phone: dto.sender.phone,
         cnic: dto.sender.cnic,
         cityId: dto.sender.cityId,
-        type: 'SENDER' as any,
+        type: CustomerType.SENDER,
       });
       sender = await this.customerRepository.save(sender);
     }
@@ -218,7 +223,7 @@ export class ConsignmentsService {
         phone: dto.receiver.phone,
         cnic: dto.receiver.cnic,
         cityId: dto.receiver.cityId,
-        type: 'RECEIVER' as any,
+        type: CustomerType.RECEIVER,
       });
       receiver = await this.customerRepository.save(receiver);
     }
@@ -274,7 +279,7 @@ export class ConsignmentsService {
         consignmentId: savedConsignment.id,
         amount: paidAmount,
         type: PaymentType.BOOKING,
-        method: dto.payment?.method as any || 'CASH',
+        method: (dto.payment?.method as PaymentMethod) || PaymentMethod.CASH,
       });
       await this.paymentRepository.save(payment);
     }
@@ -336,7 +341,7 @@ export class ConsignmentsService {
           consignmentId: consignment.id,
           amount: dto.payment.paidAmount,
           type: PaymentType.ADJUSTMENT,
-          method: dto.payment.method as any || 'CASH',
+          method: (dto.payment.method as PaymentMethod) || PaymentMethod.CASH,
         });
         await this.paymentRepository.save(payment);
       }
@@ -409,7 +414,7 @@ export class ConsignmentsService {
         consignmentId: consignment.id,
         amount: additionalPaidAmount,
         type: PaymentType.DELIVERY,
-        method: dto.paymentMethod as any || 'CASH',
+        method: (dto.paymentMethod as PaymentMethod) || PaymentMethod.CASH,
       });
       await this.paymentRepository.save(payment);
     }

@@ -1,3 +1,4 @@
+import { Exclude } from 'class-transformer';
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { UserRole } from '../../../common/enums/user-role.enum';
 import { Branch } from '../../branches/entities/branch.entity';
@@ -14,6 +15,7 @@ export class User {
   email: string;
 
   @Column()
+  @Exclude()
   password: string;
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.SITE_OFFICER })

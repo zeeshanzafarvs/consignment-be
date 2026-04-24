@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, DatabaseModule } from './config';
 import { AuthModule } from './modules/auth/auth.module';
+import { SeederModule } from './modules/auth/seeder.module';
 import { UsersModule } from './modules/users/users.module';
 import { BranchesModule } from './modules/branches/branches.module';
 import { CitiesModule } from './modules/cities/cities.module';
@@ -21,6 +22,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     ConfigModule,
     DatabaseModule,
     AuthModule,
+    SeederModule,
     UsersModule,
     BranchesModule,
     CitiesModule,

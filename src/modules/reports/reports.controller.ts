@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Param, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { ReportsService } from './reports.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -14,54 +14,45 @@ import { ApiResponseHelper } from '../../common/helpers/api-response.helper';
 export class ReportsController {
   constructor(private reportsService: ReportsService) {}
 
-  @Get('consignments')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Generate consignment report' })
-  @ApiResponse({ status: 200, description: 'Report generated successfully' })
-  @ApiQuery({ name: 'startDate', required: true })
-  @ApiQuery({ name: 'endDate', required: true })
-  async getConsignmentReport(
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
+  @Get('daily-bookings')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @ApiOperation({ summary: 'Get daily booking register' })
+  @ApiResponse({ status: 200, description: 'Report retrieved successfully' })
+  @ApiQuery({ name: 'date', required: true })
+  @ApiQuery({ name: 'branchId', required: false })
+  async getDailyBookings(
+    @Request() req: any,
+    @Query('date') date: string,
+    @Query('branchId') branchId?: string,
   ) {
-    const report = await this.reportsService.generateConsignmentReport(
-      new Date(startDate),
-      new Date(endDate),
-    );
+    const report = await this.reportsService.getDailyBookings(date, branchId, req.user);
     return ApiResponseHelper.success(report);
   }
 
-  @Get('expenses')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Generate expense report' })
-  @ApiResponse({ status: 200, description: 'Report generated successfully' })
-  @ApiQuery({ name: 'startDate', required: true })
-  @ApiQuery({ name: 'endDate', required: true })
-  async getExpenseReport(
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
-  ) {
-    const report = await this.reportsService.generateExpenseReport(
-      new Date(startDate),
-      new Date(endDate),
-    );
+  @Get('manifest/:manifestId')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @ApiOperation({ summary: 'Get vehicle loading list' })
+  @ApiResponse({ status: 200, description: 'Report retrieved successfully' })
+  async getManifestReport(@Param('manifestId') manifestId: string) {
+    const report = await this.reportsService.getManifestReport(manifestId);
     return ApiResponseHelper.success(report);
   }
 
-  @Get('profit-loss')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Generate profit/loss report' })
-  @ApiResponse({ status: 200, description: 'Report generated successfully' })
-  @ApiQuery({ name: 'startDate', required: true })
-  @ApiQuery({ name: 'endDate', required: true })
-  async getProfitLossReport(
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
-  ) {
-    const report = await this.reportsService.generateProfitLossReport(
-      new Date(startDate),
-      new Date(endDate),
-    );
+  @Get('delivery-receipt/:consignmentId')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @ApiOperation({ summary: 'Get delivery receipt data' })
+  @ApiResponse({ status: 200, description: 'Report retrieved successfully' })
+  async getDeliveryReceipt(@Param('consignmentId') consignmentId: string) {
+    const report = await this.reportsService.getDeliveryReceipt(consignmentId);
+    return ApiResponseHelper.success(report);
+  }
+
+  @Get('customer-ledger/:customerId')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @ApiOperation({ summary: 'Get customer ledger' })
+  @ApiResponse({ status: 200, description: 'Report retrieved successfully' })
+  async getCustomerLedger(@Request() req: any, @Param('customerId') customerId: string) {
+    const report = await this.reportsService.getCustomerLedger(customerId, req.user);
     return ApiResponseHelper.success(report);
   }
 }

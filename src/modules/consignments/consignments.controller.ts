@@ -318,7 +318,13 @@ export class ConsignmentsController {
       },
       req.user,
     );
-    return ApiResponseHelper.success(result);
+    return ApiResponseHelper.paginated(
+      result.data,
+      result.total,
+      result.page,
+      result.limit,
+      'Consignments retrieved successfully',
+    );
   }
 
   @Get('by-bilty/:biltyNumber')

@@ -71,6 +71,24 @@ export class DashboardService {
       );
     }
 
+    // Helper method to apply branch filter
+    const applyBranchFilter = (query: any) => {
+      const effectiveBranchId = branchId || (user?.branchId);
+      if (branchId) {
+        query.andWhere('consignment.fromBranchId = :branchId', { branchId });
+      } else if (user?.role === 'MANAGER' && user.branchId) {
+        query.andWhere(
+          '(consignment.fromBranchId = :branchId OR consignment.toBranchId = :branchId)',
+          { branchId: user.branchId },
+        );
+      } else if (user?.role === 'SITE_OFFICER' && user.branchId) {
+        query.andWhere(
+          '(consignment.fromBranchId = :branchId OR consignment.toBranchId = :branchId)',
+          { branchId: user.branchId },
+        );
+      }
+    };
+
     const [
       todayBookingsResult,
       revenueResult,
@@ -105,20 +123,26 @@ export class DashboardService {
         .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: startDate, end: endDate })
         .andWhere('consignment.isActive = :isActive', { isActive: true })
         .getRawOne(),
-      this.consignmentRepository
-        .createQueryBuilder('consignment')
-        .select('COUNT(*)', 'count')
-        .where('consignment.status NOT IN (:...statuses)', {
-          statuses: [ConsignmentStatus.DELIVERED, ConsignmentStatus.CANCELLED],
-        })
-        .andWhere('consignment.isActive = :isActive', { isActive: true })
-        .getRawOne(),
-      this.consignmentRepository
-        .createQueryBuilder('consignment')
-        .select('COUNT(*)', 'count')
-        .where('consignment.status = :status', { status: ConsignmentStatus.IN_TRANSIT })
-        .andWhere('consignment.isActive = :isActive', { isActive: true })
-        .getRawOne(),
+      (() => {
+        const query = this.consignmentRepository
+          .createQueryBuilder('consignment')
+          .select('COUNT(*)', 'count')
+          .where('consignment.status NOT IN (:...statuses)', {
+            statuses: [ConsignmentStatus.DELIVERED, ConsignmentStatus.CANCELLED],
+          })
+          .andWhere('consignment.isActive = :isActive', { isActive: true });
+        applyBranchFilter(query);
+        return query.getRawOne();
+      })(),
+      (() => {
+        const query = this.consignmentRepository
+          .createQueryBuilder('consignment')
+          .select('COUNT(*)', 'count')
+          .where('consignment.status = :status', { status: ConsignmentStatus.IN_TRANSIT })
+          .andWhere('consignment.isActive = :isActive', { isActive: true });
+        applyBranchFilter(query);
+        return query.getRawOne();
+      })(),
       this.consignmentRepository
         .createQueryBuilder('consignment')
         .select('COUNT(*)', 'count')
@@ -145,6 +169,10 @@ export class DashboardService {
 
     if (branchId) {
       expenseQuery.andWhere('expense.branchId = :branchId', { branchId });
+    } else if (user?.role === 'MANAGER' && user.branchId) {
+      expenseQuery.andWhere('expense.branchId = :branchId', { branchId: user.branchId });
+    } else if (user?.role === 'SITE_OFFICER' && user.branchId) {
+      expenseQuery.andWhere('expense.branchId = :branchId', { branchId: user.branchId });
     }
 
     const expensesResult = await expenseQuery.getRawOne();

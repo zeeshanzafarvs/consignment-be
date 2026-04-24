@@ -42,7 +42,7 @@ export class CitiesController {
       limit: limit ? parseInt(limit) : 10,
       search,
     });
-    return ApiResponseHelper.success(result);
+    return ApiResponseHelper.success(result.data);
   }
 
   @Get(':id')

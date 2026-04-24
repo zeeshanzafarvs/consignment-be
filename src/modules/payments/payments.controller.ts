@@ -84,7 +84,13 @@ export class PaymentsController {
       { consignmentId, type, method, dateFrom, dateTo },
       { page: page ? parseInt(page) : 1, limit: limit ? parseInt(limit) : 10 },
     );
-    return ApiResponseHelper.success(result);
+    return ApiResponseHelper.paginated(
+      result.data,
+      result.total,
+      result.page,
+      result.limit,
+      'Payments retrieved successfully',
+    );
   }
 
   @Get(':id')

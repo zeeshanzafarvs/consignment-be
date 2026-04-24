@@ -82,7 +82,13 @@ export class ExpensesController {
       { branchId, manifestId, type, dateFrom, dateTo },
       { page: page ? parseInt(page) : 1, limit: limit ? parseInt(limit) : 10 },
     );
-    return ApiResponseHelper.success(result);
+    return ApiResponseHelper.paginated(
+      result.data,
+      result.total,
+      result.page,
+      result.limit,
+      'Expenses retrieved successfully',
+    );
   }
 
   @Get(':id')

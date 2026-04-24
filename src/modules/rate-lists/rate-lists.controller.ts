@@ -162,7 +162,13 @@ export class RateListsController {
         limit: limit ? parseInt(limit) : 10,
       },
     );
-    return ApiResponseHelper.success(result);
+    return ApiResponseHelper.paginated(
+      result.data,
+      result.total,
+      result.page,
+      result.limit,
+      'Rate lists retrieved successfully',
+    );
   }
 
   @Get('calculate')

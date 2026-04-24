@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { Repository, LessThanOrEqual, MoreThanOrEqual, Like } from 'typeorm';
 import { DispatchManifest } from './entities/dispatch-manifest.entity';
 import { ManifestItem } from './entities/manifest-item.entity';
 import { Consignment } from '../consignments/entities/consignment.entity';
@@ -153,8 +153,8 @@ export class DispatchManifestsService {
   async addItems(manifestId: string, dto: AddItemsDto): Promise<ManifestItem[]> {
     const manifest = await this.findOne(manifestId);
 
-    if (manifest.status !== ManifestStatus.CREATED && manifest.status !== ManifestStatus.LOADING) {
-      throw new ForbiddenException('Cannot add items - manifest is not in CREATED or LOADING status');
+    if (manifest.status !== ManifestStatus.CREATED) {
+      throw new ForbiddenException('Cannot add items - manifest is not in CREATED status');
     }
 
     const items: ManifestItem[] = [];
@@ -181,7 +181,7 @@ export class DispatchManifestsService {
         .createQueryBuilder('item')
         .innerJoin('item.manifest', 'manifest')
         .where('item.consignmentId = :consignmentId', { consignmentId })
-        .andWhere('manifest.status IN (:... statuses)', { statuses: [ManifestStatus.CREATED, ManifestStatus.LOADING] })
+        .andWhere('manifest.status = :status', { status: ManifestStatus.CREATED })
         .getOne();
       if (inOtherActiveManifest) {
         throw new BadRequestException(`Consignment ${consignmentId} is already in another active manifest`);
@@ -199,8 +199,8 @@ export class DispatchManifestsService {
 
   async removeItem(manifestId: string, itemId: string): Promise<void> {
     const manifest = await this.findOne(manifestId);
-    if (manifest.status !== ManifestStatus.CREATED && manifest.status !== ManifestStatus.LOADING) {
-      throw new ForbiddenException('Cannot remove items - manifest is not in CREATED or LOADING status');
+    if (manifest.status !== ManifestStatus.CREATED) {
+      throw new ForbiddenException('Cannot remove items - manifest is not in CREATED status');
     }
 
     const item = await this.manifestItemRepository.findOne({ where: { id: itemId, manifestId } });
@@ -218,8 +218,8 @@ export class DispatchManifestsService {
       throw new BadRequestException('Vehicle and driver are required');
     }
 
-    if (manifest.status !== ManifestStatus.CREATED && manifest.status !== ManifestStatus.LOADING) {
-      throw new ForbiddenException('Cannot dispatch - manifest is not in CREATED or LOADING status');
+    if (manifest.status !== ManifestStatus.CREATED) {
+      throw new ForbiddenException('Cannot dispatch - manifest is not in CREATED status');
     }
 
     if (!manifest.departureTime) {
@@ -272,7 +272,11 @@ export class DispatchManifestsService {
   private async generateManifestNumber(): Promise<string> {
     const date = new Date();
     const prefix = `MAN${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
-    const count = await this.manifestRepository.count();
+    const count = await this.manifestRepository.count({
+      where: {
+        manifestNumber: Like(`${prefix}%`),
+      },
+    });
     return `${prefix}${(count + 1).toString().padStart(4, '0')}`;
   }
 

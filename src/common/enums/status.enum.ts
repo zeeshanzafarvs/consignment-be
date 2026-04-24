@@ -27,7 +27,6 @@ export enum PaymentMethod {
 
 export enum ManifestStatus {
   CREATED = 'CREATED',
-  LOADING = 'LOADING',
   DISPATCHED = 'DISPATCHED',
   ARRIVED = 'ARRIVED',
   CLOSED = 'CLOSED',
