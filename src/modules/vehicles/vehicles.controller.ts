@@ -10,29 +10,21 @@ import { ApiResponseHelper } from '../../common/helpers/api-response.helper';
 
 class CreateVehicleDto {
   @IsString()
-  vehicleNo: string;
+  numberPlate: string;
 
   @IsString()
   @IsOptional()
-  vehicleType?: string;
-
-  @IsString()
-  @IsOptional()
-  capacity?: string;
+  type?: string;
 }
 
 class UpdateVehicleDto {
   @IsString()
   @IsOptional()
-  vehicleNo?: string;
+  numberPlate?: string;
 
   @IsString()
   @IsOptional()
-  vehicleType?: string;
-
-  @IsString()
-  @IsOptional()
-  capacity?: string;
+  type?: string;
 
   @IsOptional()
   isAvailable?: boolean;

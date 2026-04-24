@@ -1,107 +1,231 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiForbiddenResponse } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNumber, IsEnum } from 'class-validator';
+import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiForbiddenResponse, ApiQuery } from '@nestjs/swagger';
+import { IsString, IsOptional, IsNumber, IsObject, ValidateNested, Min, IsEnum } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ConsignmentsService } from './consignments.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
-import { ConsignmentStatus } from '../../common/enums/status.enum';
+import { ConsignmentStatus, PaymentStatus } from '../../common/enums/status.enum';
 import { ApiResponseHelper } from '../../common/helpers/api-response.helper';
 
-class CreateConsignmentDto {
+class SenderDto {
   @IsString()
-  customerId: string;
+  name: string;
+
+  @IsString()
+  phone: string;
 
   @IsString()
   @IsOptional()
-  senderBranchId?: string;
+  cnic?: string;
 
   @IsString()
   @IsOptional()
-  receiverBranchId?: string;
+  cityId?: string;
+}
+
+class ReceiverDto {
+  @IsString()
+  name: string;
+
+  @IsString()
+  phone: string;
 
   @IsString()
   @IsOptional()
-  itemTypeId?: string;
+  cnic?: string;
 
   @IsString()
-  description: string;
+  @IsOptional()
+  cityId?: string;
+}
+
+class ChargesDto {
+  @IsNumber()
+  @Min(0)
+  fare: number;
 
   @IsNumber()
+  @IsOptional()
+  @Min(0)
+  loading?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  unloading?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  labor?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  warehouse?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  misc?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  stTax?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  ttTax?: number;
+}
+
+class PaymentDto {
+  @IsEnum(PaymentStatus)
+  @IsOptional()
+  paymentStatus?: PaymentStatus;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  paidAmount?: number;
+
+  @IsString()
+  @IsOptional()
+  method?: string;
+}
+
+class CreateConsignmentDto {
+  @IsObject()
+  @ValidateNested()
+  @Type(() => SenderDto)
+  sender: SenderDto;
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => ReceiverDto)
+  receiver: ReceiverDto;
+
+  @IsString()
+  fromBranchId: string;
+
+  @IsString()
+  toBranchId: string;
+
+  @IsString()
+  fromCityId: string;
+
+  @IsString()
+  toCityId: string;
+
+  @IsString()
+  itemTypeId: string;
+
+  @IsNumber()
+  @Min(1)
   quantity: number;
 
   @IsNumber()
-  weight: number;
+  @IsOptional()
+  @Min(0)
+  weight?: number;
+
+  @IsString()
+  goodsDescription: string;
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => ChargesDto)
+  charges: ChargesDto;
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => PaymentDto)
+  @IsOptional()
+  payment?: PaymentDto;
+}
+
+class UpdateChargesDto {
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  fare?: number;
 
   @IsNumber()
-  rate: number;
+  @IsOptional()
+  @Min(0)
+  loading?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  unloading?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  labor?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  warehouse?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  misc?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  stTax?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  ttTax?: number;
+}
+
+class UpdatePaymentDto {
+  @IsNumber()
+  @Min(0)
+  paidAmount: number;
 
   @IsString()
   @IsOptional()
-  recipientName?: string;
-
-  @IsString()
-  @IsOptional()
-  recipientPhone?: string;
-
-  @IsString()
-  @IsOptional()
-  recipientAddress?: string;
-
-  @IsString()
-  @IsOptional()
-  recipientCityId?: string;
+  method?: string;
 }
 
 class UpdateConsignmentDto {
   @IsString()
   @IsOptional()
-  customerId?: string;
-
-  @IsString()
-  @IsOptional()
-  senderBranchId?: string;
-
-  @IsString()
-  @IsOptional()
-  receiverBranchId?: string;
-
-  @IsString()
-  @IsOptional()
-  itemTypeId?: string;
-
-  @IsString()
-  @IsOptional()
-  description?: string;
+  goodsDescription?: string;
 
   @IsNumber()
   @IsOptional()
+  @Min(1)
   quantity?: number;
 
   @IsNumber()
   @IsOptional()
+  @Min(0)
   weight?: number;
 
-  @IsNumber()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UpdateChargesDto)
   @IsOptional()
-  rate?: number;
+  charges?: UpdateChargesDto;
 
-  @IsString()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UpdatePaymentDto)
   @IsOptional()
-  recipientName?: string;
-
-  @IsString()
-  @IsOptional()
-  recipientPhone?: string;
-
-  @IsString()
-  @IsOptional()
-  recipientAddress?: string;
-
-  @IsString()
-  @IsOptional()
-  recipientCityId?: string;
+  payment?: UpdatePaymentDto;
 }
 
 @ApiTags('Consignments')
@@ -112,11 +236,63 @@ export class ConsignmentsController {
   constructor(private consignmentsService: ConsignmentsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all consignments' })
+  @ApiOperation({ summary: 'Get all consignments with filters' })
   @ApiResponse({ status: 200, description: 'Consignments retrieved successfully' })
-  async findAll() {
-    const consignments = await this.consignmentsService.findAll();
-    return ApiResponseHelper.success(consignments);
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'biltyNumber', required: false })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'paymentStatus', required: false })
+  @ApiQuery({ name: 'fromCityId', required: false })
+  @ApiQuery({ name: 'toCityId', required: false })
+  @ApiQuery({ name: 'fromBranchId', required: false })
+  @ApiQuery({ name: 'toBranchId', required: false })
+  @ApiQuery({ name: 'dateFrom', required: false })
+  @ApiQuery({ name: 'dateTo', required: false })
+  async findAll(
+    @Request() req: any,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('biltyNumber') biltyNumber?: string,
+    @Query('status') status?: ConsignmentStatus,
+    @Query('paymentStatus') paymentStatus?: PaymentStatus,
+    @Query('fromCityId') fromCityId?: string,
+    @Query('toCityId') toCityId?: string,
+    @Query('fromBranchId') fromBranchId?: string,
+    @Query('toBranchId') toBranchId?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    const result = await this.consignmentsService.findAll(
+      {
+        biltyNumber,
+        status,
+        paymentStatus,
+        fromCityId,
+        toCityId,
+        fromBranchId,
+        toBranchId,
+        dateFrom,
+        dateTo,
+        search,
+      },
+      {
+        page: page ? parseInt(page) : 1,
+        limit: limit ? parseInt(limit) : 10,
+      },
+      req.user,
+    );
+    return ApiResponseHelper.success(result);
+  }
+
+  @Get('by-bilty/:biltyNumber')
+  @ApiOperation({ summary: 'Get consignment by bilty number' })
+  @ApiResponse({ status: 200, description: 'Consignment retrieved successfully' })
+  async findByBilty(@Param('biltyNumber') biltyNumber: string) {
+    const consignment = await this.consignmentsService.findByBilty(biltyNumber);
+    return ApiResponseHelper.success(consignment);
   }
 
   @Get(':id')
@@ -127,34 +303,14 @@ export class ConsignmentsController {
     return ApiResponseHelper.success(consignment);
   }
 
-  @Get('customer/:customerId')
-  @ApiOperation({ summary: 'Get consignments by customer' })
-  @ApiResponse({ status: 200, description: 'Consignments retrieved successfully' })
-  async findByCustomer(@Param('customerId') customerId: string) {
-    const consignments = await this.consignmentsService.findByCustomer(customerId);
-    return ApiResponseHelper.success(consignments);
-  }
-
-  @Get('manifest/:manifestId')
-  @ApiOperation({ summary: 'Get consignments by manifest' })
-  @ApiResponse({ status: 200, description: 'Consignments retrieved successfully' })
-  async findByManifest(@Param('manifestId') manifestId: string) {
-    const consignments = await this.consignmentsService.findByManifest(manifestId);
-    return ApiResponseHelper.success(consignments);
-  }
-
   @Post()
   @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Create new consignment' })
   @ApiResponse({ status: 201, description: 'Consignment created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
-  async create(@Body() dto: CreateConsignmentDto) {
-    const totalAmount = dto.quantity * dto.rate;
-    const consignment = await this.consignmentsService.create({
-      ...dto,
-      totalAmount,
-    });
-    return ApiResponseHelper.created(consignment);
+  async create(@Request() req: any, @Body() dto: CreateConsignmentDto) {
+    const consignment = await this.consignmentsService.create(dto, req.user?.id);
+    return ApiResponseHelper.created(consignment, 'Consignment created successfully');
   }
 
   @Patch(':id')
@@ -163,24 +319,15 @@ export class ConsignmentsController {
   @ApiResponse({ status: 200, description: 'Consignment updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateConsignmentDto) {
     const consignment = await this.consignmentsService.update(id, dto);
-    return ApiResponseHelper.updated(consignment);
+    return ApiResponseHelper.updated(consignment, 'Consignment updated successfully');
   }
 
-  @Patch(':id/status')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
-  @ApiOperation({ summary: 'Update consignment status' })
-  @ApiResponse({ status: 200, description: 'Consignment status updated successfully' })
-  async updateStatus(@Param('id') id: string, @Body('status') status: ConsignmentStatus) {
-    const consignment = await this.consignmentsService.updateStatus(id, status);
-    return ApiResponseHelper.updated(consignment);
-  }
-
-  @Delete(':id')
+  @Patch(':id/cancel')
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Delete consignment' })
-  @ApiResponse({ status: 200, description: 'Consignment deleted successfully' })
-  async remove(@Param('id') id: string) {
-    await this.consignmentsService.remove(id);
-    return ApiResponseHelper.deleted();
+  @ApiOperation({ summary: 'Cancel consignment' })
+  @ApiResponse({ status: 200, description: 'Consignment cancelled successfully' })
+  async cancel(@Param('id') id: string) {
+    const consignment = await this.consignmentsService.cancel(id);
+    return ApiResponseHelper.updated(consignment, 'Consignment cancelled successfully');
   }
 }

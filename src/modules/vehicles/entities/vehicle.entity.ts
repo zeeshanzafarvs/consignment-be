@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 @Entity('vehicles')
-@Index('idx_vehicle_number')
+@Index('idx_vehicle_number', ['numberPlate'])
 export class Vehicle {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -14,6 +14,9 @@ export class Vehicle {
 
   @Column({ default: true })
   isActive: boolean;
+
+  @Column({ default: true })
+  isAvailable: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

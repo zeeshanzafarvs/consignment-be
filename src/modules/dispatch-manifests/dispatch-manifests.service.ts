@@ -37,10 +37,10 @@ export class DispatchManifestsService {
   }
 
   async create(data: Partial<DispatchManifest>) {
-    const manifestNo = await this.generateManifestNo();
+    const manifestNumber = await this.generateManifestNumber();
     const manifest = this.manifestRepository.create({
       ...data,
-      manifestNo,
+      manifestNumber,
     });
     return this.manifestRepository.save(manifest);
   }
@@ -63,7 +63,7 @@ export class DispatchManifestsService {
     return this.manifestRepository.save(manifest);
   }
 
-  private async generateManifestNo(): Promise<string> {
+  private async generateManifestNumber(): Promise<string> {
     const date = new Date();
     const prefix = `MAN${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}`;
     const count = await this.manifestRepository.count();

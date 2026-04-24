@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
-import { ExpenseCategory } from '../../common/enums/status.enum';
+import { ExpenseType } from '../../common/enums/status.enum';
 import { ApiResponseHelper } from '../../common/helpers/api-response.helper';
 
 class CreateExpenseDto {
@@ -16,15 +16,12 @@ class CreateExpenseDto {
   @IsNumber()
   amount: number;
 
-  @IsEnum(ExpenseCategory)
-  category: ExpenseCategory;
-
-  @IsDateString()
-  expenseDate: string;
+  @IsEnum(ExpenseType)
+  type: ExpenseType;
 
   @IsString()
   @IsOptional()
-  vehicleId?: string;
+  branchId?: string;
 
   @IsString()
   @IsOptional()
@@ -40,21 +37,9 @@ class UpdateExpenseDto {
   @IsOptional()
   amount?: number;
 
-  @IsEnum(ExpenseCategory)
+  @IsEnum(ExpenseType)
   @IsOptional()
-  category?: ExpenseCategory;
-
-  @IsDateString()
-  @IsOptional()
-  expenseDate?: string;
-
-  @IsString()
-  @IsOptional()
-  vehicleId?: string;
-
-  @IsString()
-  @IsOptional()
-  manifestId?: string;
+  type?: ExpenseType;
 }
 
 @ApiTags('Expenses')
@@ -80,19 +65,19 @@ export class ExpensesController {
     return ApiResponseHelper.success(expense);
   }
 
-  @Get('category/:category')
-  @ApiOperation({ summary: 'Get expenses by category' })
+  @Get('type/:type')
+  @ApiOperation({ summary: 'Get expenses by type' })
   @ApiResponse({ status: 200, description: 'Expenses retrieved successfully' })
-  async findByCategory(@Param('category') category: ExpenseCategory) {
-    const expenses = await this.expensesService.findByCategory(category);
+  async findByType(@Param('type') type: ExpenseType) {
+    const expenses = await this.expensesService.findByType(type);
     return ApiResponseHelper.success(expenses);
   }
 
-  @Get('vehicle/:vehicleId')
-  @ApiOperation({ summary: 'Get expenses by vehicle' })
+  @Get('branch/:branchId')
+  @ApiOperation({ summary: 'Get expenses by branch' })
   @ApiResponse({ status: 200, description: 'Expenses retrieved successfully' })
-  async findByVehicle(@Param('vehicleId') vehicleId: string) {
-    const expenses = await this.expensesService.findByVehicle(vehicleId);
+  async findByBranch(@Param('branchId') branchId: string) {
+    const expenses = await this.expensesService.findByBranch(branchId);
     return ApiResponseHelper.success(expenses);
   }
 
@@ -102,10 +87,7 @@ export class ExpensesController {
   @ApiResponse({ status: 201, description: 'Expense created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
   async create(@Body() dto: CreateExpenseDto) {
-    const expense = await this.expensesService.create({
-      ...dto,
-      expenseDate: new Date(dto.expenseDate),
-    });
+    const expense = await this.expensesService.create(dto);
     return ApiResponseHelper.created(expense);
   }
 
@@ -114,10 +96,7 @@ export class ExpensesController {
   @ApiOperation({ summary: 'Update expense' })
   @ApiResponse({ status: 200, description: 'Expense updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateExpenseDto) {
-    const expense = await this.expensesService.update(id, {
-      ...dto,
-      expenseDate: dto.expenseDate ? new Date(dto.expenseDate) : undefined,
-    });
+    const expense = await this.expensesService.update(id, dto);
     return ApiResponseHelper.updated(expense);
   }
 

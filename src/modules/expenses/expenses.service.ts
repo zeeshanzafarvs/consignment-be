@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Expense } from './entities/expense.entity';
-import { ExpenseCategory } from '../../common/enums/status.enum';
+import { ExpenseType } from '../../common/enums/status.enum';
 
 @Injectable()
 export class ExpensesService {
@@ -14,14 +14,14 @@ export class ExpensesService {
   async findAll() {
     return this.expenseRepository.find({
       where: { isActive: true },
-      relations: ['vehicle', 'manifest'],
+      relations: ['branch', 'manifest'],
     });
   }
 
   async findOne(id: string) {
     const expense = await this.expenseRepository.findOne({
       where: { id, isActive: true },
-      relations: ['vehicle', 'manifest'],
+      relations: ['branch', 'manifest'],
     });
     if (!expense) {
       throw new NotFoundException('Expense not found');
@@ -29,17 +29,28 @@ export class ExpensesService {
     return expense;
   }
 
-  async findByCategory(category: ExpenseCategory) {
+  async findByBranch(branchId: string) {
     return this.expenseRepository.find({
-      where: { category, isActive: true },
-      relations: ['vehicle', 'manifest'],
+      where: { branchId, isActive: true },
+      relations: ['branch', 'manifest'],
     });
+  }
+
+  async findByType(type: ExpenseType) {
+    return this.expenseRepository.find({
+      where: { type, isActive: true },
+      relations: ['branch', 'manifest'],
+    });
+  }
+
+  async findByCategory(category: ExpenseType) {
+    return this.findByType(category);
   }
 
   async findByVehicle(vehicleId: string) {
     return this.expenseRepository.find({
-      where: { vehicleId, isActive: true },
-      relations: ['vehicle', 'manifest'],
+      where: { isActive: true },
+      relations: ['branch', 'manifest'],
     });
   }
 

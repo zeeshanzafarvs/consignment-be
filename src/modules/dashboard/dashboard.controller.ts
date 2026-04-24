@@ -28,22 +28,6 @@ export class DashboardController {
     return ApiResponseHelper.success(stats);
   }
 
-  @Get('revenue/stats')
-  @ApiOperation({ summary: 'Get revenue statistics' })
-  @ApiResponse({ status: 200, description: 'Revenue stats retrieved successfully' })
-  @ApiQuery({ name: 'startDate', required: false })
-  @ApiQuery({ name: 'endDate', required: false })
-  async getRevenueStats(
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
-    const stats = await this.dashboardService.getRevenueStats(
-      startDate ? new Date(startDate) : undefined,
-      endDate ? new Date(endDate) : undefined,
-    );
-    return ApiResponseHelper.success({ total: stats });
-  }
-
   @Get('daily')
   @ApiOperation({ summary: 'Get daily statistics' })
   @ApiResponse({ status: 200, description: 'Daily stats retrieved successfully' })

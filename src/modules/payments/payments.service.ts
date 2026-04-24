@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Payment } from './entities/payment.entity';
-import { PaymentStatus } from '../../common/enums/status.enum';
 
 @Injectable()
 export class PaymentsService {
@@ -44,12 +43,6 @@ export class PaymentsService {
   async update(id: string, data: Partial<Payment>) {
     const payment = await this.findOne(id);
     Object.assign(payment, data);
-    return this.paymentRepository.save(payment);
-  }
-
-  async updateStatus(id: string, status: PaymentStatus) {
-    const payment = await this.findOne(id);
-    payment.status = status;
     return this.paymentRepository.save(payment);
   }
 

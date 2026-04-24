@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiForbiddenResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiForbiddenResponse, ApiQuery } from '@nestjs/swagger';
 import { IsString, IsOptional } from 'class-validator';
 import { CitiesService } from './cities.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -11,28 +11,12 @@ import { ApiResponseHelper } from '../../common/helpers/api-response.helper';
 class CreateCityDto {
   @IsString()
   name: string;
-
-  @IsString()
-  @IsOptional()
-  state?: string;
-
-  @IsString()
-  @IsOptional()
-  pincode?: string;
 }
 
 class UpdateCityDto {
   @IsString()
   @IsOptional()
   name?: string;
-
-  @IsString()
-  @IsOptional()
-  state?: string;
-
-  @IsString()
-  @IsOptional()
-  pincode?: string;
 }
 
 @ApiTags('Cities')
@@ -43,11 +27,22 @@ export class CitiesController {
   constructor(private citiesService: CitiesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all cities' })
+  @ApiOperation({ summary: 'Get all cities with pagination and search' })
   @ApiResponse({ status: 200, description: 'Cities retrieved successfully' })
-  async findAll() {
-    const cities = await this.citiesService.findAll();
-    return ApiResponseHelper.success(cities);
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'search', required: false })
+  async findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
+    const result = await this.citiesService.findAll({
+      page: page ? parseInt(page) : 1,
+      limit: limit ? parseInt(limit) : 10,
+      search,
+    });
+    return ApiResponseHelper.success(result);
   }
 
   @Get(':id')
@@ -65,7 +60,7 @@ export class CitiesController {
   @ApiForbiddenResponse({ description: 'Forbidden' })
   async create(@Body() dto: CreateCityDto) {
     const city = await this.citiesService.create(dto);
-    return ApiResponseHelper.created(city);
+    return ApiResponseHelper.created(city, 'City created successfully');
   }
 
   @Patch(':id')
@@ -74,7 +69,7 @@ export class CitiesController {
   @ApiResponse({ status: 200, description: 'City updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateCityDto) {
     const city = await this.citiesService.update(id, dto);
-    return ApiResponseHelper.updated(city);
+    return ApiResponseHelper.updated(city, 'City updated successfully');
   }
 
   @Delete(':id')
@@ -83,6 +78,6 @@ export class CitiesController {
   @ApiResponse({ status: 200, description: 'City deleted successfully' })
   async remove(@Param('id') id: string) {
     await this.citiesService.remove(id);
-    return ApiResponseHelper.deleted();
+    return ApiResponseHelper.deleted('City deleted successfully');
   }
 }

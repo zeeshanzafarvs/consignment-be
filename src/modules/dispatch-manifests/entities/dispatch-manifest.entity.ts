@@ -7,7 +7,7 @@ import { User } from '../../users/entities/user.entity';
 import { ManifestItem } from './manifest-item.entity';
 
 @Entity('dispatch_manifests')
-@Index('idx_manifest_number')
+@Index('idx_manifest_number', ['manifestNumber'])
 export class DispatchManifest {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -61,6 +61,9 @@ export class DispatchManifest {
 
   @OneToMany(() => ManifestItem, (item) => item.manifest)
   items: ManifestItem[];
+
+  @Column({ default: true })
+  isActive: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

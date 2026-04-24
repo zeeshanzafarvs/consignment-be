@@ -4,7 +4,7 @@ import { Consignment } from '../../consignments/entities/consignment.entity';
 import { User } from '../../users/entities/user.entity';
 
 @Entity('payments')
-@Index('idx_payment_consignment')
+@Index('idx_payment_consignment', ['consignmentId'])
 @Index('idx_payment_created_at', ['createdAt'])
 export class Payment {
   @PrimaryGeneratedColumn('uuid')
@@ -25,6 +25,9 @@ export class Payment {
 
   @Column({ type: 'enum', enum: PaymentMethod })
   method: PaymentMethod;
+
+  @Column({ default: true })
+  isActive: boolean;
 
   @Column({ nullable: true })
   createdById: string;

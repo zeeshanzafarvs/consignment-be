@@ -1,23 +1,33 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      secretOrKey: process.env.JWT_SECRET || 'your-secret-key',
+      secretOrKey: process.env.JWT_SECRET || 'default-secret-key',
       ignoreExpiration: false,
     });
   }
 
-  async validate(payload: { sub: string; email: string; role: string }): Promise<User> {
-    return {
-      id: payload.sub,
-      email: payload.email,
-      role: payload.role as any,
-    } as User;
+  async validate(payload: { sub: string; email: string; role: string; branchId?: string }): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { id: payload.sub },
+      relations: ['branch'],
+    });
+
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('User not found or inactive');
+    }
+
+    return user;
   }
 }

@@ -31,23 +31,6 @@ export class ReportsController {
     return ApiResponseHelper.success(report);
   }
 
-  @Get('revenue')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Generate revenue report' })
-  @ApiResponse({ status: 200, description: 'Report generated successfully' })
-  @ApiQuery({ name: 'startDate', required: true })
-  @ApiQuery({ name: 'endDate', required: true })
-  async getRevenueReport(
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
-  ) {
-    const report = await this.reportsService.generateRevenueReport(
-      new Date(startDate),
-      new Date(endDate),
-    );
-    return ApiResponseHelper.success(report);
-  }
-
   @Get('expenses')
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Generate expense report' })

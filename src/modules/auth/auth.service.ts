@@ -1,38 +1,57 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, OnModuleInit } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../users/entities/user.entity';
+import { UserRole } from '../../common/enums/user-role.enum';
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private jwtService: JwtService,
   ) {}
 
-  async register(email: string, password: string, username: string) {
-    const existingUser = await this.userRepository.findOne({ where: { email } });
-    if (existingUser) {
-      throw new ConflictException('User already exists');
-    }
+  async onModuleInit() {
+    await this.seedAdminUser();
+  }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = this.userRepository.create({
-      email,
-      password: hashedPassword,
-      username,
+  private async seedAdminUser() {
+    const existingAdmin = await this.userRepository.findOne({
+      where: { email: 'admin@transport.com' },
     });
 
-    await this.userRepository.save(user);
-    return this.generateToken(user);
+    if (!existingAdmin) {
+      const hashedPassword = await bcrypt.hash('Admin@123', 12);
+      const admin = this.userRepository.create({
+        name: 'System Admin',
+        email: 'admin@transport.com',
+        password: hashedPassword,
+        role: UserRole.ADMIN,
+      });
+      await this.userRepository.save(admin);
+      console.log('Admin user created: admin@transport.com / Admin@123');
+    }
   }
 
   async login(email: string, password: string) {
-    const user = await this.userRepository.findOne({ where: { email } });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    const user = await this.userRepository.findOne({
+      where: { email },
+      relations: ['branch'],
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is inactive');
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -40,14 +59,21 @@ export class AuthService {
   }
 
   private generateToken(user: User) {
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      branchId: user.branchId,
+    };
+
     return {
       accessToken: this.jwtService.sign(payload),
       user: {
         id: user.id,
+        name: user.name,
         email: user.email,
-        username: user.username,
         role: user.role,
+        branchId: user.branchId,
       },
     };
   }

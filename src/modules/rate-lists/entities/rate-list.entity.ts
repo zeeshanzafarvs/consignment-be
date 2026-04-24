@@ -4,7 +4,7 @@ import { City } from '../../cities/entities/city.entity';
 import { ItemType } from '../../item-types/entities/item-type.entity';
 
 @Entity('rate_lists')
-@Index('idx_rate_from_to')
+@Index('idx_rate_from_to', ['fromCityId', 'toCityId'])
 export class RateList {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -50,6 +50,9 @@ export class RateList {
 
   @Column({ default: true })
   active: boolean;
+
+  @Column({ default: true })
+  isActive: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

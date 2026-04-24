@@ -8,12 +8,12 @@ import { User } from '../../users/entities/user.entity';
 import { Payment } from '../../payments/entities/payment.entity';
 
 @Entity('consignments')
-@Index('idx_consignment_bilty')
-@Index('idx_consignment_status')
-@Index('idx_consignment_payment_status')
+@Index('idx_consignment_bilty', ['biltyNumber'])
+@Index('idx_consignment_status', ['status'])
+@Index('idx_consignment_payment_status', ['paymentStatus'])
 @Index('idx_consignment_created_at', ['createdAt'])
-@Index('idx_consignment_from_city')
-@Index('idx_consignment_to_city')
+@Index('idx_consignment_from_city', ['fromCityId'])
+@Index('idx_consignment_to_city', ['toCityId'])
 export class Consignment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -130,6 +130,9 @@ export class Consignment {
 
   @OneToMany(() => Payment, (payment) => payment.consignment)
   payments: Payment[];
+
+  @Column({ default: true })
+  isActive: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

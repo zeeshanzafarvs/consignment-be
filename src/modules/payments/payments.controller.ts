@@ -1,12 +1,12 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiForbiddenResponse } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNumber, IsDateString, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsEnum } from 'class-validator';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
-import { PaymentStatus } from '../../common/enums/status.enum';
+import { PaymentType, PaymentMethod } from '../../common/enums/status.enum';
 import { ApiResponseHelper } from '../../common/helpers/api-response.helper';
 
 class CreatePaymentDto {
@@ -16,21 +16,11 @@ class CreatePaymentDto {
   @IsNumber()
   amount: number;
 
-  @IsNumber()
-  @IsOptional()
-  paidAmount?: number;
+  @IsEnum(PaymentType)
+  type: PaymentType;
 
-  @IsDateString()
-  @IsOptional()
-  paymentDate?: string;
-
-  @IsString()
-  @IsOptional()
-  paymentMode?: string;
-
-  @IsString()
-  @IsOptional()
-  transactionNo?: string;
+  @IsEnum(PaymentMethod)
+  method: PaymentMethod;
 }
 
 class UpdatePaymentDto {
@@ -38,21 +28,13 @@ class UpdatePaymentDto {
   @IsOptional()
   amount?: number;
 
-  @IsNumber()
+  @IsEnum(PaymentType)
   @IsOptional()
-  paidAmount?: number;
+  type?: PaymentType;
 
-  @IsDateString()
+  @IsEnum(PaymentMethod)
   @IsOptional()
-  paymentDate?: string;
-
-  @IsString()
-  @IsOptional()
-  paymentMode?: string;
-
-  @IsString()
-  @IsOptional()
-  transactionNo?: string;
+  method?: PaymentMethod;
 }
 
 @ApiTags('Payments')
@@ -92,10 +74,7 @@ export class PaymentsController {
   @ApiResponse({ status: 201, description: 'Payment created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
   async create(@Body() dto: CreatePaymentDto) {
-    const payment = await this.paymentsService.create({
-      ...dto,
-      paymentDate: dto.paymentDate ? new Date(dto.paymentDate) : undefined,
-    });
+    const payment = await this.paymentsService.create(dto);
     return ApiResponseHelper.created(payment);
   }
 
@@ -104,19 +83,7 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Update payment' })
   @ApiResponse({ status: 200, description: 'Payment updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdatePaymentDto) {
-    const payment = await this.paymentsService.update(id, {
-      ...dto,
-      paymentDate: dto.paymentDate ? new Date(dto.paymentDate) : undefined,
-    });
-    return ApiResponseHelper.updated(payment);
-  }
-
-  @Patch(':id/status')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
-  @ApiOperation({ summary: 'Update payment status' })
-  @ApiResponse({ status: 200, description: 'Payment status updated successfully' })
-  async updateStatus(@Param('id') id: string, @Body('status') status: PaymentStatus) {
-    const payment = await this.paymentsService.updateStatus(id, status);
+    const payment = await this.paymentsService.update(id, dto);
     return ApiResponseHelper.updated(payment);
   }
 

@@ -4,8 +4,8 @@ import { City } from '../../cities/entities/city.entity';
 import { Branch } from '../../branches/entities/branch.entity';
 
 @Entity('customers')
-@Index('idx_customer_name')
-@Index('idx_customer_phone')
+@Index('idx_customer_name', ['name'])
+@Index('idx_customer_phone', ['phone'])
 export class Customer {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -35,6 +35,9 @@ export class Customer {
 
   @Column({ type: 'enum', enum: CustomerType, default: CustomerType.BOTH })
   type: CustomerType;
+
+  @Column({ default: true })
+  isActive: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

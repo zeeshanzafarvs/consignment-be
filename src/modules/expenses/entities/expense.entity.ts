@@ -4,7 +4,7 @@ import { Branch } from '../../branches/entities/branch.entity';
 import { DispatchManifest } from '../../dispatch-manifests/entities/dispatch-manifest.entity';
 
 @Entity('expenses')
-@Index('idx_expense_branch')
+@Index('idx_expense_branch', ['branchId'])
 @Index('idx_expense_created_at', ['createdAt'])
 export class Expense {
   @PrimaryGeneratedColumn('uuid')
@@ -32,6 +32,9 @@ export class Expense {
 
   @Column({ type: 'text', nullable: true })
   note: string;
+
+  @Column({ default: true })
+  isActive: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

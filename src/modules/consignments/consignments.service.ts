@@ -1,27 +1,175 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Like } from 'typeorm';
 import { Consignment } from './entities/consignment.entity';
-import { ConsignmentStatus } from '../../common/enums/status.enum';
+import { Customer } from '../customers/entities/customer.entity';
+import { Payment } from '../payments/entities/payment.entity';
+import { ConsignmentStatus, PaymentStatus, PaymentType } from '../../common/enums/status.enum';
+import { User } from '../users/entities/user.entity';
+
+export interface ConsignmentFilters {
+  biltyNumber?: string;
+  status?: ConsignmentStatus;
+  paymentStatus?: PaymentStatus;
+  fromCityId?: string;
+  toCityId?: string;
+  fromBranchId?: string;
+  toBranchId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  search?: string;
+}
+
+export interface PaginationParams {
+  page: number;
+  limit: number;
+}
+
+export interface CreateConsignmentDto {
+  sender: {
+    name: string;
+    phone: string;
+    cnic?: string;
+    cityId?: string;
+  };
+  receiver: {
+    name: string;
+    phone: string;
+    cnic?: string;
+    cityId?: string;
+  };
+  fromBranchId: string;
+  toBranchId: string;
+  fromCityId: string;
+  toCityId: string;
+  itemTypeId: string;
+  quantity: number;
+  weight?: number;
+  goodsDescription: string;
+  charges: {
+    fare: number;
+    loading?: number;
+    unloading?: number;
+    labor?: number;
+    warehouse?: number;
+    misc?: number;
+    stTax?: number;
+    ttTax?: number;
+  };
+  payment?: {
+    paymentStatus?: PaymentStatus;
+    paidAmount?: number;
+    method?: string;
+  };
+}
+
+export interface UpdateConsignmentDto {
+  goodsDescription?: string;
+  quantity?: number;
+  weight?: number;
+  charges?: {
+    fare?: number;
+    loading?: number;
+    unloading?: number;
+    labor?: number;
+    warehouse?: number;
+    misc?: number;
+    stTax?: number;
+    ttTax?: number;
+  };
+  payment?: {
+    paidAmount?: number;
+    method?: string;
+  };
+}
 
 @Injectable()
 export class ConsignmentsService {
   constructor(
     @InjectRepository(Consignment)
     private consignmentRepository: Repository<Consignment>,
+    @InjectRepository(Customer)
+    private customerRepository: Repository<Customer>,
+    @InjectRepository(Payment)
+    private paymentRepository: Repository<Payment>,
   ) {}
 
-  async findAll() {
-    return this.consignmentRepository.find({
-      where: { isActive: true },
-      relations: ['customer', 'senderBranch', 'receiverBranch', 'itemType'],
-    });
+  async findAll(
+    filters: ConsignmentFilters,
+    pagination: PaginationParams,
+    user?: User,
+  ): Promise<{ data: Consignment[]; total: number; page: number; limit: number; totalPages: number }> {
+    const { page, limit } = pagination;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.consignmentRepository
+      .createQueryBuilder('consignment')
+      .leftJoinAndSelect('consignment.sender', 'sender')
+      .leftJoinAndSelect('consignment.receiver', 'receiver')
+      .leftJoinAndSelect('consignment.fromBranch', 'fromBranch')
+      .leftJoinAndSelect('consignment.toBranch', 'toBranch')
+      .leftJoinAndSelect('consignment.fromCity', 'fromCity')
+      .leftJoinAndSelect('consignment.toCity', 'toCity')
+      .leftJoinAndSelect('consignment.itemType', 'itemType')
+      .leftJoinAndSelect('consignment.createdBy', 'createdBy');
+
+    if (user?.role === 'SITE_OFFICER' && user.branchId) {
+      queryBuilder.andWhere('(consignment.fromBranchId = :branchId OR consignment.toBranchId = :branchId)', { branchId: user.branchId });
+    } else if (user?.role === 'MANAGER' && user.branchId) {
+      queryBuilder.andWhere('(consignment.fromBranchId = :branchId OR consignment.toBranchId = :branchId)', { branchId: user.branchId });
+    }
+
+    if (filters.biltyNumber) {
+      queryBuilder.andWhere('consignment.biltyNumber ILIKE :biltyNumber', { biltyNumber: `%${filters.biltyNumber}%` });
+    }
+    if (filters.status) {
+      queryBuilder.andWhere('consignment.status = :status', { status: filters.status });
+    }
+    if (filters.paymentStatus) {
+      queryBuilder.andWhere('consignment.paymentStatus = :paymentStatus', { paymentStatus: filters.paymentStatus });
+    }
+    if (filters.fromCityId) {
+      queryBuilder.andWhere('consignment.fromCityId = :fromCityId', { fromCityId: filters.fromCityId });
+    }
+    if (filters.toCityId) {
+      queryBuilder.andWhere('consignment.toCityId = :toCityId', { toCityId: filters.toCityId });
+    }
+    if (filters.fromBranchId) {
+      queryBuilder.andWhere('consignment.fromBranchId = :fromBranchId', { fromBranchId: filters.fromBranchId });
+    }
+    if (filters.toBranchId) {
+      queryBuilder.andWhere('consignment.toBranchId = :toBranchId', { toBranchId: filters.toBranchId });
+    }
+    if (filters.dateFrom) {
+      queryBuilder.andWhere('consignment.createdAt >= :dateFrom', { dateFrom: new Date(filters.dateFrom) });
+    }
+    if (filters.dateTo) {
+      queryBuilder.andWhere('consignment.createdAt <= :dateTo', { dateTo: new Date(filters.dateTo) });
+    }
+    if (filters.search) {
+      queryBuilder.andWhere(
+        '(consignment.biltyNumber ILIKE :search OR sender.name ILIKE :search OR receiver.name ILIKE :search)',
+        { search: `%${filters.search}%` },
+      );
+    }
+
+    queryBuilder.skip(skip).take(limit).orderBy('consignment.createdAt', 'DESC');
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<Consignment> {
     const consignment = await this.consignmentRepository.findOne({
-      where: { id, isActive: true },
-      relations: ['customer', 'senderBranch', 'receiverBranch', 'itemType'],
+      where: { id },
+      relations: ['sender', 'receiver', 'fromBranch', 'toBranch', 'fromCity', 'toCity', 'itemType', 'createdBy', 'payments'],
     });
     if (!consignment) {
       throw new NotFoundException('Consignment not found');
@@ -29,51 +177,186 @@ export class ConsignmentsService {
     return consignment;
   }
 
-  async findByCustomer(customerId: string) {
-    return this.consignmentRepository.find({
-      where: { customerId, isActive: true },
-      relations: ['customer', 'senderBranch', 'receiverBranch', 'itemType'],
+  async findByBilty(biltyNumber: string): Promise<Consignment> {
+    const consignment = await this.consignmentRepository.findOne({
+      where: { biltyNumber },
+      relations: ['sender', 'receiver', 'fromBranch', 'toBranch', 'fromCity', 'toCity', 'itemType', 'createdBy', 'payments'],
     });
+    if (!consignment) {
+      throw new NotFoundException('Consignment not found');
+    }
+    return consignment;
   }
 
-  async findByManifest(manifestId: string) {
-    return this.consignmentRepository.find({
-      where: { manifestId, isActive: true },
-      relations: ['customer', 'senderBranch', 'receiverBranch', 'itemType'],
-    });
-  }
+  async create(dto: CreateConsignmentDto, userId?: string): Promise<Consignment> {
+    let sender = await this.customerRepository.findOne({ where: { phone: dto.sender.phone } });
+    if (!sender) {
+      sender = this.customerRepository.create({
+        name: dto.sender.name,
+        phone: dto.sender.phone,
+        cnic: dto.sender.cnic,
+        cityId: dto.sender.cityId,
+        type: 'SENDER' as any,
+      });
+      sender = await this.customerRepository.save(sender);
+    }
 
-  async create(data: Partial<Consignment>) {
-    const consignmentNo = await this.generateConsignmentNo();
+    let receiver = await this.customerRepository.findOne({ where: { phone: dto.receiver.phone } });
+    if (!receiver) {
+      receiver = this.customerRepository.create({
+        name: dto.receiver.name,
+        phone: dto.receiver.phone,
+        cnic: dto.receiver.cnic,
+        cityId: dto.receiver.cityId,
+        type: 'RECEIVER' as any,
+      });
+      receiver = await this.customerRepository.save(receiver);
+    }
+
+    const { fare, loading = 0, unloading = 0, labor = 0, warehouse = 0, misc = 0, stTax = 0, ttTax = 0 } = dto.charges;
+    const totalAmount = fare + loading + unloading + labor + warehouse + misc + stTax + ttTax;
+
+    const paidAmount = dto.payment?.paidAmount ?? 0;
+    let paymentStatus: PaymentStatus;
+    if (paidAmount >= totalAmount) {
+      paymentStatus = PaymentStatus.PAID;
+    } else if (paidAmount > 0) {
+      paymentStatus = PaymentStatus.PARTIAL;
+    } else {
+      paymentStatus = PaymentStatus.TO_PAY;
+    }
+    const remainingAmount = totalAmount - paidAmount;
+
+    const biltyNumber = await this.generateBiltyNumber();
+
     const consignment = this.consignmentRepository.create({
-      ...data,
-      consignmentNo,
+      biltyNumber,
+      senderId: sender.id,
+      receiverId: receiver.id,
+      fromBranchId: dto.fromBranchId,
+      toBranchId: dto.toBranchId,
+      fromCityId: dto.fromCityId,
+      toCityId: dto.toCityId,
+      itemTypeId: dto.itemTypeId,
+      quantity: dto.quantity,
+      weight: dto.weight,
+      goodsDescription: dto.goodsDescription,
+      fare,
+      loading,
+      unloading,
+      labor,
+      warehouse,
+      misc,
+      stTax,
+      ttTax,
+      totalAmount,
+      paidAmount,
+      remainingAmount,
+      status: ConsignmentStatus.BOOKED,
+      paymentStatus,
+      createdById: userId,
     });
-    return this.consignmentRepository.save(consignment);
+
+    const savedConsignment = await this.consignmentRepository.save(consignment);
+
+    if (paidAmount > 0) {
+      const payment = this.paymentRepository.create({
+        consignmentId: savedConsignment.id,
+        amount: paidAmount,
+        type: PaymentType.BOOKING,
+        method: dto.payment?.method as any || 'CASH',
+      });
+      await this.paymentRepository.save(payment);
+    }
+
+    return this.findOne(savedConsignment.id);
   }
 
-  async update(id: string, data: Partial<Consignment>) {
+  async update(id: string, dto: UpdateConsignmentDto, userId?: string): Promise<Consignment> {
     const consignment = await this.findOne(id);
-    Object.assign(consignment, data);
-    return this.consignmentRepository.save(consignment);
+
+    if (consignment.status !== ConsignmentStatus.BOOKED) {
+      throw new ForbiddenException('Only BOOKED consignments can be edited');
+    }
+
+    if (dto.goodsDescription) {
+      consignment.goodsDescription = dto.goodsDescription;
+    }
+    if (dto.quantity) {
+      consignment.quantity = dto.quantity;
+    }
+    if (dto.weight !== undefined) {
+      consignment.weight = dto.weight;
+    }
+
+    if (dto.charges) {
+      const { fare, loading, unloading, labor, warehouse, misc, stTax, ttTax } = dto.charges;
+      if (fare !== undefined) consignment.fare = fare;
+      if (loading !== undefined) consignment.loading = loading;
+      if (unloading !== undefined) consignment.unloading = unloading;
+      if (labor !== undefined) consignment.labor = labor;
+      if (warehouse !== undefined) consignment.warehouse = warehouse;
+      if (misc !== undefined) consignment.misc = misc;
+      if (stTax !== undefined) consignment.stTax = stTax;
+      if (ttTax !== undefined) consignment.ttTax = ttTax;
+
+      consignment.totalAmount =
+        consignment.fare +
+        consignment.loading +
+        consignment.unloading +
+        consignment.labor +
+        consignment.warehouse +
+        consignment.misc +
+        consignment.stTax +
+        consignment.ttTax;
+    }
+
+    if (dto.payment?.paidAmount !== undefined) {
+      consignment.paidAmount += dto.payment.paidAmount;
+      consignment.remainingAmount = consignment.totalAmount - consignment.paidAmount;
+
+      if (consignment.paidAmount >= consignment.totalAmount) {
+        consignment.paymentStatus = PaymentStatus.PAID;
+      } else if (consignment.paidAmount > 0) {
+        consignment.paymentStatus = PaymentStatus.PARTIAL;
+      }
+
+      if (dto.payment.paidAmount > 0) {
+        const payment = this.paymentRepository.create({
+          consignmentId: consignment.id,
+          amount: dto.payment.paidAmount,
+          type: PaymentType.ADJUSTMENT,
+          method: dto.payment.method as any || 'CASH',
+        });
+        await this.paymentRepository.save(payment);
+      }
+    }
+
+    await this.consignmentRepository.save(consignment);
+    return this.findOne(id);
   }
 
-  async updateStatus(id: string, status: ConsignmentStatus) {
+  async cancel(id: string): Promise<Consignment> {
     const consignment = await this.findOne(id);
-    consignment.status = status;
-    return this.consignmentRepository.save(consignment);
+    if (consignment.status === ConsignmentStatus.CANCELLED) {
+      throw new BadRequestException('Consignment is already cancelled');
+    }
+    if (consignment.status === ConsignmentStatus.DELIVERED) {
+      throw new BadRequestException('Cannot cancel delivered consignment');
+    }
+    consignment.status = ConsignmentStatus.CANCELLED;
+    await this.consignmentRepository.save(consignment);
+    return this.findOne(id);
   }
 
-  async remove(id: string) {
-    const consignment = await this.findOne(id);
-    consignment.isActive = false;
-    return this.consignmentRepository.save(consignment);
-  }
-
-  private async generateConsignmentNo(): Promise<string> {
+  private async generateBiltyNumber(): Promise<string> {
     const date = new Date();
-    const prefix = `CNS${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-    const count = await this.consignmentRepository.count();
-    return `${prefix}${(count + 1).toString().padStart(6, '0')}`;
+    const prefix = `CNS${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
+    const count = await this.consignmentRepository.count({
+      where: {
+        biltyNumber: Like(`${prefix}%`),
+      },
+    });
+    return `${prefix}${(count + 1).toString().padStart(4, '0')}`;
   }
 }

@@ -18,12 +18,13 @@ class CreateManifestDto {
   @IsOptional()
   driverId?: string;
 
-  @IsDateString()
-  dispatchDate: string;
+  @IsString()
+  @IsOptional()
+  fromBranchId?: string;
 
   @IsString()
   @IsOptional()
-  branchId?: string;
+  toBranchId?: string;
 }
 
 class UpdateManifestDto {
@@ -35,13 +36,13 @@ class UpdateManifestDto {
   @IsOptional()
   driverId?: string;
 
-  @IsDateString()
+  @IsString()
   @IsOptional()
-  dispatchDate?: string;
+  fromBranchId?: string;
 
   @IsString()
   @IsOptional()
-  branchId?: string;
+  toBranchId?: string;
 }
 
 @ApiTags('DispatchManifests')
@@ -81,10 +82,7 @@ export class DispatchManifestsController {
   @ApiResponse({ status: 201, description: 'Manifest created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
   async create(@Body() dto: CreateManifestDto) {
-    const manifest = await this.manifestsService.create({
-      ...dto,
-      dispatchDate: new Date(dto.dispatchDate),
-    });
+    const manifest = await this.manifestsService.create(dto);
     return ApiResponseHelper.created(manifest);
   }
 
@@ -93,10 +91,7 @@ export class DispatchManifestsController {
   @ApiOperation({ summary: 'Update manifest' })
   @ApiResponse({ status: 200, description: 'Manifest updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateManifestDto) {
-    const manifest = await this.manifestsService.update(id, {
-      ...dto,
-      dispatchDate: dto.dispatchDate ? new Date(dto.dispatchDate) : undefined,
-    });
+    const manifest = await this.manifestsService.update(id, dto);
     return ApiResponseHelper.updated(manifest);
   }
 

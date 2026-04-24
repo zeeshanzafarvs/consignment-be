@@ -26,6 +26,9 @@ export class Branch {
   @OneToMany(() => User, (user) => user.branch)
   users: User[];
 
+  @Column({ default: true })
+  isActive: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 
