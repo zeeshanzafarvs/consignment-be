@@ -1,25 +1,62 @@
-import { Controller, Get, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiForbiddenResponse, ApiNotFoundResponse } from '@nestjs/swagger';
-import { IsString, IsOptional, IsEnum } from 'class-validator';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiForbiddenResponse, ApiNotFoundResponse, ApiBadRequestResponse } from '@nestjs/swagger';
+import { IsString, IsOptional, IsEnum, IsEmail, MinLength } from 'class-validator';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
+import { User } from './entities/user.entity';
 import { ApiResponseHelper } from '../../common/helpers/api-response.helper';
 
-class UpdateUserDto {
+class CreateUserDto {
   @IsString()
-  @IsOptional()
-  username?: string;
+  name: string;
+
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  @MinLength(8)
+  password: string;
+
+  @IsEnum(UserRole)
+  role: UserRole;
 
   @IsString()
   @IsOptional()
   branchId?: string;
+}
+
+class UpdateUserDto {
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsEmail()
+  @IsOptional()
+  email?: string;
 
   @IsEnum(UserRole)
   @IsOptional()
   role?: UserRole;
+
+  @IsString()
+  @IsOptional()
+  branchId?: string;
+}
+
+class ResetPasswordDto {
+  @IsString()
+  @MinLength(8)
+  newPassword: string;
+}
+
+class AssignBranchDto {
+  @IsString()
+  @IsOptional()
+  branchId?: string | null;
 }
 
 @ApiTags('Users')
@@ -31,7 +68,7 @@ export class UsersController {
 
   @Get()
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get all users' })
+  @ApiOperation({ summary: 'Get all users (Admin only)' })
   @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
   async findAll() {
@@ -39,31 +76,121 @@ export class UsersController {
     return ApiResponseHelper.success(users);
   }
 
+  @Get('branch/:branchId')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @ApiOperation({ summary: 'Get users for a specific branch' })
+  @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  async findByBranch(@Param('branchId') branchId: string, @CurrentUser() currentUser: User) {
+    // Manager can only view their own branch
+    if (currentUser.role === UserRole.MANAGER && currentUser.branchId !== branchId) {
+      return ApiResponseHelper.error('Forbidden', 403);
+    }
+    const users = await this.usersService.findAllForBranch(branchId);
+    return ApiResponseHelper.success(users);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({ status: 200, description: 'User retrieved successfully' })
   @ApiNotFoundResponse({ description: 'User not found' })
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string, @CurrentUser() currentUser: User) {
     const user = await this.usersService.findOne(id);
+    
+    // Manager can only view users in their branch
+    if (currentUser.role === UserRole.MANAGER && user.branchId !== currentUser.branchId) {
+      return ApiResponseHelper.error('Forbidden', 403);
+    }
+    
     return ApiResponseHelper.success(user);
+  }
+
+  @Post()
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create new user (Admin only)' })
+  @ApiResponse({ status: 201, description: 'User created successfully' })
+  @ApiBadRequestResponse({ description: 'Invalid input' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  async create(@Body() dto: CreateUserDto, @CurrentUser() currentUser: User) {
+    const user = await this.usersService.create(dto, currentUser);
+    return ApiResponseHelper.success(user, 'User created successfully');
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update user' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiNotFoundResponse({ description: 'User not found' })
-  async update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    const user = await this.usersService.update(id, dto);
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @CurrentUser() currentUser: User,
+  ) {
+    const user = await this.usersService.update(id, dto, currentUser);
+    return ApiResponseHelper.updated(user);
+  }
+
+  @Patch(':id/deactivate')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Deactivate user (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User deactivated successfully' })
+  @ApiNotFoundResponse({ description: 'User not found' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  async deactivate(@Param('id') id: string, @CurrentUser() currentUser: User) {
+    const user = await this.usersService.deactivate(id, currentUser);
+    return ApiResponseHelper.updated(user);
+  }
+
+  @Patch(':id/activate')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Activate user (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User activated successfully' })
+  @ApiNotFoundResponse({ description: 'User not found' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  async activate(@Param('id') id: string, @CurrentUser() currentUser: User) {
+    const user = await this.usersService.activate(id, currentUser);
+    return ApiResponseHelper.updated(user);
+  }
+
+  @Patch(':id/reset-password')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Reset user password (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Password reset successfully' })
+  @ApiNotFoundResponse({ description: 'User not found' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  async resetPassword(
+    @Param('id') id: string,
+    @Body() dto: ResetPasswordDto,
+    @CurrentUser() currentUser: User,
+  ) {
+    const user = await this.usersService.resetPassword(id, dto.newPassword, currentUser);
+    return ApiResponseHelper.updated(user);
+  }
+
+  @Patch(':id/assign-branch')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Assign branch to user (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Branch assigned successfully' })
+  @ApiNotFoundResponse({ description: 'User not found' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  async assignBranch(
+    @Param('id') id: string,
+    @Body() dto: AssignBranchDto,
+    @CurrentUser() currentUser: User,
+  ) {
+    const user = await this.usersService.assignBranch(id, dto.branchId, currentUser);
     return ApiResponseHelper.updated(user);
   }
 
   @Delete(':id')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Delete user' })
+  @ApiOperation({ summary: 'Delete user (Admin only)' })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
   @ApiNotFoundResponse({ description: 'User not found' })
-  async remove(@Param('id') id: string) {
-    await this.usersService.remove(id);
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  async remove(@Param('id') id: string, @CurrentUser() currentUser: User) {
+    await this.usersService.remove(id, currentUser);
     return ApiResponseHelper.deleted();
   }
 }

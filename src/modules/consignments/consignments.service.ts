@@ -72,6 +72,11 @@ export interface UpdateConsignmentDto {
   goodsDescription?: string;
   quantity?: number;
   weight?: number;
+  fromCityId?: string;
+  toCityId?: string;
+  fromBranchId?: string;
+  toBranchId?: string;
+  itemTypeId?: string | null;
   charges?: {
     fare?: number;
     loading?: number;
@@ -81,6 +86,11 @@ export interface UpdateConsignmentDto {
     misc?: number;
     stTax?: number;
     ttTax?: number;
+    godown?: number;
+    handling?: number;
+    delivery?: number;
+    adjustment?: number;
+    previousBalance?: number;
   };
   payment?: {
     paidAmount?: number;
@@ -303,9 +313,27 @@ export class ConsignmentsService {
     if (dto.weight !== undefined) {
       consignment.weight = dto.weight;
     }
+    if (dto.fromCityId) {
+      consignment.fromCityId = dto.fromCityId;
+    }
+    if (dto.toCityId) {
+      consignment.toCityId = dto.toCityId;
+    }
+    if (dto.fromBranchId) {
+      consignment.fromBranchId = dto.fromBranchId;
+    }
+    if (dto.toBranchId) {
+      consignment.toBranchId = dto.toBranchId;
+    }
+    if (dto.itemTypeId !== undefined && dto.itemTypeId !== null) {
+      consignment.itemTypeId = dto.itemTypeId;
+    }
 
     if (dto.charges) {
-      const { fare, loading, unloading, labor, warehouse, misc, stTax, ttTax } = dto.charges;
+      const { 
+        fare, loading, unloading, labor, warehouse, misc, stTax, ttTax,
+        godown, handling, delivery, adjustment, previousBalance 
+      } = dto.charges;
       if (fare !== undefined) consignment.fare = fare;
       if (loading !== undefined) consignment.loading = loading;
       if (unloading !== undefined) consignment.unloading = unloading;
@@ -314,6 +342,11 @@ export class ConsignmentsService {
       if (misc !== undefined) consignment.misc = misc;
       if (stTax !== undefined) consignment.stTax = stTax;
       if (ttTax !== undefined) consignment.ttTax = ttTax;
+      if (godown !== undefined) consignment.godown = godown;
+      if (handling !== undefined) consignment.handling = handling;
+      if (delivery !== undefined) consignment.delivery = delivery;
+      if (adjustment !== undefined) consignment.adjustment = adjustment;
+      if (previousBalance !== undefined) consignment.previousBalance = previousBalance;
 
       consignment.totalAmount =
         consignment.fare +
@@ -323,7 +356,12 @@ export class ConsignmentsService {
         consignment.warehouse +
         consignment.misc +
         consignment.stTax +
-        consignment.ttTax;
+        consignment.ttTax +
+        consignment.godown +
+        consignment.handling +
+        consignment.delivery +
+        consignment.adjustment +
+        consignment.previousBalance;
     }
 
     if (dto.payment?.paidAmount !== undefined) {
@@ -422,7 +460,7 @@ export class ConsignmentsService {
     return this.findOne(id);
   }
 
-  async searchForDelivery(biltyNumber: string, receiverPhone?: string): Promise<Consignment> {
+  async searchForDelivery(biltyNumber?: string, receiverPhone?: string): Promise<Consignment[]> {
     const queryBuilder = this.consignmentRepository
       .createQueryBuilder('consignment')
       .leftJoinAndSelect('consignment.sender', 'sender')
@@ -432,17 +470,17 @@ export class ConsignmentsService {
       .leftJoinAndSelect('consignment.fromCity', 'fromCity')
       .leftJoinAndSelect('consignment.toCity', 'toCity')
       .leftJoinAndSelect('consignment.itemType', 'itemType')
-      .where('consignment.biltyNumber = :biltyNumber', { biltyNumber });
+      .where('consignment.status IN (:...statuses)', { statuses: ['ARRIVED'] });
+
+    if (biltyNumber) {
+      queryBuilder.andWhere('consignment.biltyNumber LIKE :biltyNumber', { biltyNumber: `%${biltyNumber}%` });
+    }
 
     if (receiverPhone) {
-      queryBuilder.andWhere('receiver.phone = :phone', { phone: receiverPhone });
+      queryBuilder.andWhere('receiver.phone LIKE :phone', { phone: `%${receiverPhone}%` });
     }
 
-    const consignment = await queryBuilder.getOne();
-    if (!consignment) {
-      throw new NotFoundException('Consignment not found');
-    }
-    return consignment;
+    return queryBuilder.getMany();
   }
 
   private async generateBiltyNumber(): Promise<string> {

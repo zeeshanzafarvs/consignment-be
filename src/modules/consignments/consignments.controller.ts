@@ -188,6 +188,31 @@ class UpdateChargesDto {
   @IsOptional()
   @Min(0)
   ttTax?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  godown?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  handling?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  delivery?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  adjustment?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  previousBalance?: number;
 }
 
 class UpdatePaymentDto {
@@ -214,6 +239,26 @@ class UpdateConsignmentDto {
   @IsOptional()
   @Min(0)
   weight?: number;
+
+  @IsString()
+  @IsOptional()
+  fromCityId?: string;
+
+  @IsString()
+  @IsOptional()
+  toCityId?: string;
+
+  @IsString()
+  @IsOptional()
+  fromBranchId?: string;
+
+  @IsString()
+  @IsOptional()
+  toBranchId?: string;
+
+  @IsString()
+  @IsOptional()
+  itemTypeId?: string;
 
   @IsObject()
   @ValidateNested()

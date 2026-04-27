@@ -22,7 +22,7 @@ class CreateBranchDto {
 
   @IsString()
   @IsOptional()
-  contact?: string;
+  phone?: string;
 }
 
 class UpdateBranchDto {
@@ -40,7 +40,7 @@ class UpdateBranchDto {
 
   @IsString()
   @IsOptional()
-  contact?: string;
+  phone?: string;
 }
 
 @ApiTags('Branches')

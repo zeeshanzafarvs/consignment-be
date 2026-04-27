@@ -11,11 +11,17 @@ export class BranchesService {
   ) {}
 
   async findAll() {
-    return this.branchRepository.find({ where: { isActive: true } });
+    return this.branchRepository.find({ 
+      where: { isActive: true },
+      relations: ['city']
+    });
   }
 
   async findOne(id: string) {
-    const branch = await this.branchRepository.findOne({ where: { id, isActive: true } });
+    const branch = await this.branchRepository.findOne({ 
+      where: { id, isActive: true },
+      relations: ['city']
+    });
     if (!branch) {
       throw new NotFoundException('Branch not found');
     }
@@ -30,7 +36,8 @@ export class BranchesService {
   async update(id: string, data: Partial<Branch>) {
     const branch = await this.findOne(id);
     Object.assign(branch, data);
-    return this.branchRepository.save(branch);
+    const updated = await this.branchRepository.save(branch);
+    return this.findOne(id); // Reload with relations
   }
 
   async remove(id: string) {

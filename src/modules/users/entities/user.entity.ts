@@ -22,7 +22,7 @@ export class User {
   role: UserRole;
 
   @Column({ nullable: true })
-  branchId: string;
+  branchId: string | null;
 
   @ManyToOne(() => Branch, { nullable: true })
   @JoinColumn({ name: 'branchId' })

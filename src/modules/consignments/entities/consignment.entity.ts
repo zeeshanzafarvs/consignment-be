@@ -101,7 +101,22 @@ export class Consignment {
   warehouse: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  godown: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  handling: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  delivery: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  adjustment: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   misc: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  previousBalance: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   stTax: number;
