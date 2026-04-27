@@ -60,6 +60,11 @@ export interface CreateConsignmentDto {
     misc?: number;
     stTax?: number;
     ttTax?: number;
+    godown?: number;
+    handling?: number;
+    delivery?: number;
+    adjustment?: number;
+    previousBalance?: number;
   };
   payment?: {
     paymentStatus?: PaymentStatus;
@@ -238,8 +243,23 @@ export class ConsignmentsService {
       receiver = await this.customerRepository.save(receiver);
     }
 
-    const { fare, loading = 0, unloading = 0, labor = 0, warehouse = 0, misc = 0, stTax = 0, ttTax = 0 } = dto.charges;
-    const totalAmount = fare + loading + unloading + labor + warehouse + misc + stTax + ttTax;
+    const { 
+      fare, 
+      loading = 0, 
+      unloading = 0, 
+      labor = 0, 
+      warehouse = 0, 
+      misc = 0, 
+      stTax = 0, 
+      ttTax = 0,
+      godown = 0,
+      handling = 0,
+      delivery = 0,
+      adjustment = 0,
+      previousBalance = 0
+    } = dto.charges;
+    
+    const totalAmount = fare + loading + unloading + labor + warehouse + misc + stTax + ttTax + godown + handling + delivery + adjustment + previousBalance;
 
     const paidAmount = dto.payment?.paidAmount ?? 0;
     let paymentStatus: PaymentStatus;
@@ -274,6 +294,11 @@ export class ConsignmentsService {
       misc,
       stTax,
       ttTax,
+      godown,
+      handling,
+      delivery,
+      adjustment,
+      previousBalance,
       totalAmount,
       paidAmount,
       remainingAmount,

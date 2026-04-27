@@ -81,6 +81,31 @@ class ChargesDto {
   @IsOptional()
   @Min(0)
   ttTax?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  godown?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  handling?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  delivery?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  adjustment?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  previousBalance?: number;
 }
 
 class PaymentDto {
