@@ -115,12 +115,10 @@ export class RateListsService {
     const { fromCityId, toCityId, itemTypeId, quantity, weight } = params;
 
     const rateList = await this.rateListRepository.findOne({
-      where: {
-        fromCityId,
-        toCityId,
-        itemTypeId,
-        active: true,
-      },
+      where: [
+        { fromCityId, toCityId, itemTypeId, active: true },
+        { fromCityId: toCityId, toCityId: fromCityId, itemTypeId, active: true },
+      ],
     });
 
     if (!rateList) {

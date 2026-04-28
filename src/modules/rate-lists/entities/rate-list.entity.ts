@@ -5,6 +5,7 @@ import { ItemType } from '../../item-types/entities/item-type.entity';
 
 @Entity('rate_lists')
 @Index('idx_rate_from_to', ['fromCityId', 'toCityId'])
+@Index('idx_rate_route_item', ['fromCityId', 'toCityId', 'itemTypeId'])
 export class RateList {
   @PrimaryGeneratedColumn('uuid')
   id: string;
