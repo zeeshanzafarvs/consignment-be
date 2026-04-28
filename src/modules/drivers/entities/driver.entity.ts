@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  AfterLoad,
+  AfterInsert,
+  AfterUpdate,
+} from 'typeorm';
 
 @Entity('drivers')
 export class Driver {
@@ -10,6 +19,19 @@ export class Driver {
 
   @Column()
   phone: string;
+
+  @Column({ nullable: true })
+  licenseNo?: string;
+
+  /** API alias for `licenseNo` (not a DB column). */
+  license?: string;
+
+  @AfterLoad()
+  @AfterInsert()
+  @AfterUpdate()
+  syncLicenseAlias() {
+    this.license = this.licenseNo;
+  }
 
   @Column({ default: true })
   isActive: boolean;

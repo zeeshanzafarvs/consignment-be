@@ -49,6 +49,12 @@ export class RateList {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   defaultWarehouse: number;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  stTax: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  ttTax: number;
+
   @Column({ default: true })
   active: boolean;
 

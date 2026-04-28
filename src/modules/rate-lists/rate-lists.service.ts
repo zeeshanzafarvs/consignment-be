@@ -146,8 +146,8 @@ export class RateListsService {
     const unloading = Number(rateList.defaultUnloading || 0);
     const warehouse = Number(rateList.defaultWarehouse || 0);
     const misc = 0;
-    const stTax = 0;
-    const ttTax = 0;
+    const stTax = Number(rateList.stTax || 0);
+    const ttTax = Number(rateList.ttTax || 0);
 
     const totalAmount = fare + labor + loading + unloading + warehouse + misc + stTax + ttTax;
 

@@ -51,6 +51,16 @@ class CreateRateListDto {
   @Min(0)
   defaultWarehouse?: number;
 
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  stTax?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  ttTax?: number;
+
   @IsBoolean()
   @IsOptional()
   active?: boolean;
@@ -97,6 +107,16 @@ class UpdateRateListDto {
   @IsOptional()
   @Min(0)
   defaultWarehouse?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  stTax?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  ttTax?: number;
 
   @IsBoolean()
   @IsOptional()

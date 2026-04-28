@@ -16,6 +16,11 @@ class CreateDriverDto {
   @IsOptional()
   phone?: string;
 
+  /** Alias for clients that send `license` instead of `licenseNo`. */
+  @IsString()
+  @IsOptional()
+  license?: string;
+
   @IsString()
   @IsOptional()
   licenseNo?: string;
@@ -32,7 +37,19 @@ class UpdateDriverDto {
 
   @IsString()
   @IsOptional()
+  license?: string;
+
+  @IsString()
+  @IsOptional()
   licenseNo?: string;
+}
+
+function toDriverPayload(
+  dto: CreateDriverDto | UpdateDriverDto,
+): Partial<{ name: string; phone: string; licenseNo?: string }> {
+  const { license, licenseNo, ...rest } = dto as CreateDriverDto & { license?: string };
+  const resolvedLicense = licenseNo ?? license;
+  return { ...rest, ...(resolvedLicense !== undefined ? { licenseNo: resolvedLicense } : {}) };
 }
 
 @ApiTags('Drivers')
@@ -64,7 +81,7 @@ export class DriversController {
   @ApiResponse({ status: 201, description: 'Driver created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
   async create(@Body() dto: CreateDriverDto) {
-    const driver = await this.driversService.create(dto);
+    const driver = await this.driversService.create(toDriverPayload(dto));
     return ApiResponseHelper.created(driver);
   }
 
@@ -73,7 +90,7 @@ export class DriversController {
   @ApiOperation({ summary: 'Update driver' })
   @ApiResponse({ status: 200, description: 'Driver updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateDriverDto) {
-    const driver = await this.driversService.update(id, dto);
+    const driver = await this.driversService.update(id, toDriverPayload(dto));
     return ApiResponseHelper.updated(driver);
   }
 
