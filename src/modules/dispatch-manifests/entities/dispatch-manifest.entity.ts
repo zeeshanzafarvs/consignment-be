@@ -62,6 +62,9 @@ export class DispatchManifest {
   @OneToMany(() => ManifestItem, (item) => item.manifest)
   items: ManifestItem[];
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  profit?: number;
+
   @Column({ default: true })
   isActive: boolean;
 

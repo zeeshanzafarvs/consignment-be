@@ -16,6 +16,7 @@ import { ManifestItem } from '../dispatch-manifests/entities/manifest-item.entit
 import { Expense } from '../expenses/entities/expense.entity';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { ConsignmentStatus, PaymentStatus, PaymentType, PaymentMethod, ManifestStatus, ExpenseType, CustomerType, RateType } from '../../common/enums/status.enum';
+import { appendDailySequence, biltyNumberPrefix, manifestNumberPrefix } from '../../common/helpers/document-numbers.helper';
 import * as bcrypt from 'bcrypt';
 
 const SALT_ROUNDS = 10;
@@ -330,20 +331,6 @@ export class SeederService {
     return { created, skipped };
   }
 
-  private generateBiltyNumber(): string {
-    const date = new Date();
-    const dateStr = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `BLY-${dateStr}-${random}`;
-  }
-
-  private generateManifestNumber(): string {
-    const date = new Date();
-    const dateStr = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `MF-${dateStr}-${random}`;
-  }
-
   private async seedConsignments(): Promise<{ created: number; skipped: number }> {
     let created = 0, skipped = 0;
 
@@ -356,7 +343,7 @@ export class SeederService {
 
     const consignments = [
       {
-        biltyNumber: this.generateBiltyNumber(),
+        biltyNumber: appendDailySequence(biltyNumberPrefix(), 1),
         senderName: 'Ali Traders',
         receiverName: 'Multan Traders',
         fromCity: 'Lahore', toCity: 'Multan',
@@ -369,7 +356,7 @@ export class SeederService {
         daysAgo: 0,
       },
       {
-        biltyNumber: this.generateBiltyNumber(),
+        biltyNumber: appendDailySequence(biltyNumberPrefix(), 2),
         senderName: 'Bilal Enterprises',
         receiverName: 'Karachi Market',
         fromCity: 'Lahore', toCity: 'Karachi',
@@ -382,7 +369,7 @@ export class SeederService {
         daysAgo: 1,
       },
       {
-        biltyNumber: this.generateBiltyNumber(),
+        biltyNumber: appendDailySequence(biltyNumberPrefix(), 3),
         senderName: 'Hassan Goods',
         receiverName: 'Ali Traders',
         fromCity: 'Multan', toCity: 'Lahore',
@@ -498,7 +485,7 @@ export class SeederService {
 
     const manifests = [
       {
-        manifestNumber: this.generateManifestNumber(),
+        manifestNumber: appendDailySequence(manifestNumberPrefix(), 1),
         vehicleName: 'LEA-1234',
         driverName: 'Ali Driver',
         fromBranch: 'Lahore Main Branch',
@@ -508,7 +495,7 @@ export class SeederService {
         daysAgo: 1,
       },
       {
-        manifestNumber: this.generateManifestNumber(),
+        manifestNumber: appendDailySequence(manifestNumberPrefix(), 2),
         vehicleName: 'MTA-1111',
         driverName: 'Ahmed Driver',
         fromBranch: 'Multan Main Branch',

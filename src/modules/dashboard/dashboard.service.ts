@@ -47,6 +47,10 @@ export interface AdminDashboardStats {
 export interface ManagerDashboardStats {
   todayBookings: number;
   todayRevenue: number;
+  /** Sum of expenses recorded today for this branch (incl. manifest-linked). */
+  todayExpenses: number;
+  /** todayRevenue − todayExpenses */
+  estimatedProfit: number;
   pendingDeliveries: number;
   deliveredToday: number;
   dailyRevenue: { date: string; revenue: number }[];
@@ -95,29 +99,8 @@ export class DashboardService {
     const startDate = dateFrom ? new Date(dateFrom) : today;
     const endDate = dateTo ? new Date(dateTo) : endOfToday;
 
-    const consignmentQuery = this.consignmentRepository
-      .createQueryBuilder('consignment')
-      .where('consignment.isActive = :isActive', { isActive: true });
-
-    if (branchId) {
-      consignmentQuery.andWhere('consignment.fromBranchId = :branchId', { branchId });
-    }
-
-    if (user?.role === 'MANAGER' && user.branchId) {
-      consignmentQuery.andWhere(
-        '(consignment.fromBranchId = :branchId OR consignment.toBranchId = :branchId)',
-        { branchId: user.branchId },
-      );
-    } else if (user?.role === 'SITE_OFFICER' && user.branchId) {
-      consignmentQuery.andWhere(
-        '(consignment.fromBranchId = :branchId OR consignment.toBranchId = :branchId)',
-        { branchId: user.branchId },
-      );
-    }
-
     // Helper method to apply branch filter
     const applyBranchFilter = (query: any) => {
-      const effectiveBranchId = branchId || (user?.branchId);
       if (branchId) {
         query.andWhere('consignment.fromBranchId = :branchId', { branchId });
       } else if (user?.role === 'MANAGER' && user.branchId) {
@@ -133,6 +116,20 @@ export class DashboardService {
       }
     };
 
+    const expenseQuery = this.expenseRepository
+      .createQueryBuilder('expense')
+      .select('COALESCE(SUM(expense.amount), 0)', 'total')
+      .where('expense.createdAt >= :start AND expense.createdAt <= :end', { start: startDate, end: endDate })
+      .andWhere('expense.isActive = :isActive', { isActive: true });
+
+    if (branchId) {
+      expenseQuery.andWhere('expense.branchId = :branchId', { branchId });
+    } else if (user?.role === 'MANAGER' && user.branchId) {
+      expenseQuery.andWhere('expense.branchId = :branchId', { branchId: user.branchId });
+    } else if (user?.role === 'SITE_OFFICER' && user.branchId) {
+      expenseQuery.andWhere('expense.branchId = :branchId', { branchId: user.branchId });
+    }
+
     const [
       todayBookingsResult,
       revenueResult,
@@ -142,31 +139,44 @@ export class DashboardService {
       inTransitResult,
       deliveredTodayResult,
       toPayResult,
+      expensesResult,
     ] = await Promise.all([
-      this.consignmentRepository
-        .createQueryBuilder('consignment')
-        .select('COUNT(*)', 'count')
-        .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: startDate, end: endDate })
-        .andWhere('consignment.isActive = :isActive', { isActive: true })
-        .getRawOne(),
-      this.consignmentRepository
-        .createQueryBuilder('consignment')
-        .select('COALESCE(SUM(consignment.totalAmount), 0)', 'total')
-        .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: startDate, end: endDate })
-        .andWhere('consignment.isActive = :isActive', { isActive: true })
-        .getRawOne(),
-      this.consignmentRepository
-        .createQueryBuilder('consignment')
-        .select('COALESCE(SUM(consignment.paidAmount), 0)', 'total')
-        .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: startDate, end: endDate })
-        .andWhere('consignment.isActive = :isActive', { isActive: true })
-        .getRawOne(),
-      this.consignmentRepository
-        .createQueryBuilder('consignment')
-        .select('COALESCE(SUM(consignment.remainingAmount), 0)', 'total')
-        .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: startDate, end: endDate })
-        .andWhere('consignment.isActive = :isActive', { isActive: true })
-        .getRawOne(),
+      (() => {
+        const q = this.consignmentRepository
+          .createQueryBuilder('consignment')
+          .select('COUNT(*)', 'count')
+          .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: startDate, end: endDate })
+          .andWhere('consignment.isActive = :isActive', { isActive: true });
+        applyBranchFilter(q);
+        return q.getRawOne();
+      })(),
+      (() => {
+        const q = this.consignmentRepository
+          .createQueryBuilder('consignment')
+          .select('COALESCE(SUM(consignment.totalAmount), 0)', 'total')
+          .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: startDate, end: endDate })
+          .andWhere('consignment.isActive = :isActive', { isActive: true });
+        applyBranchFilter(q);
+        return q.getRawOne();
+      })(),
+      (() => {
+        const q = this.consignmentRepository
+          .createQueryBuilder('consignment')
+          .select('COALESCE(SUM(consignment.paidAmount), 0)', 'total')
+          .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: startDate, end: endDate })
+          .andWhere('consignment.isActive = :isActive', { isActive: true });
+        applyBranchFilter(q);
+        return q.getRawOne();
+      })(),
+      (() => {
+        const q = this.consignmentRepository
+          .createQueryBuilder('consignment')
+          .select('COALESCE(SUM(consignment.remainingAmount), 0)', 'total')
+          .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: startDate, end: endDate })
+          .andWhere('consignment.isActive = :isActive', { isActive: true });
+        applyBranchFilter(q);
+        return q.getRawOne();
+      })(),
       (() => {
         const query = this.consignmentRepository
           .createQueryBuilder('consignment')
@@ -187,44 +197,36 @@ export class DashboardService {
         applyBranchFilter(query);
         return query.getRawOne();
       })(),
-      this.consignmentRepository
-        .createQueryBuilder('consignment')
-        .select('COUNT(*)', 'count')
-        .where('consignment.status = :status', { status: ConsignmentStatus.DELIVERED })
-        .andWhere('consignment.deliveredAt >= :start AND consignment.deliveredAt <= :end', {
-          start: startDate,
-          end: endDate,
-        })
-        .andWhere('consignment.isActive = :isActive', { isActive: true })
-        .getRawOne(),
-      this.consignmentRepository
-        .createQueryBuilder('consignment')
-        .select('COALESCE(SUM(consignment.remainingAmount), 0)', 'total')
-        .where('consignment.paymentStatus = :status', { status: PaymentStatus.TO_PAY })
-        .andWhere('consignment.isActive = :isActive', { isActive: true })
-        .getRawOne(),
+      (() => {
+        const q = this.consignmentRepository
+          .createQueryBuilder('consignment')
+          .select('COUNT(*)', 'count')
+          .where('consignment.status = :status', { status: ConsignmentStatus.DELIVERED })
+          .andWhere('consignment.deliveredAt >= :start AND consignment.deliveredAt <= :end', {
+            start: startDate,
+            end: endDate,
+          })
+          .andWhere('consignment.isActive = :isActive', { isActive: true });
+        applyBranchFilter(q);
+        return q.getRawOne();
+      })(),
+      (() => {
+        const q = this.consignmentRepository
+          .createQueryBuilder('consignment')
+          .select('COALESCE(SUM(consignment.remainingAmount), 0)', 'total')
+          .where('consignment.paymentStatus = :status', { status: PaymentStatus.TO_PAY })
+          .andWhere('consignment.isActive = :isActive', { isActive: true });
+        applyBranchFilter(q);
+        return q.getRawOne();
+      })(),
+      expenseQuery.getRawOne(),
     ]);
-
-    const expenseQuery = this.expenseRepository
-      .createQueryBuilder('expense')
-      .select('COALESCE(SUM(expense.amount), 0)', 'total')
-      .where('expense.createdAt >= :start AND expense.createdAt <= :end', { start: startDate, end: endDate })
-      .andWhere('expense.isActive = :isActive', { isActive: true });
-
-    if (branchId) {
-      expenseQuery.andWhere('expense.branchId = :branchId', { branchId });
-    } else if (user?.role === 'MANAGER' && user.branchId) {
-      expenseQuery.andWhere('expense.branchId = :branchId', { branchId: user.branchId });
-    } else if (user?.role === 'SITE_OFFICER' && user.branchId) {
-      expenseQuery.andWhere('expense.branchId = :branchId', { branchId: user.branchId });
-    }
-
-    const expensesResult = await expenseQuery.getRawOne();
 
     const todayRevenue = Number(revenueResult?.total) || 0;
     const todayPaidAmount = Number(paidAmountResult?.total) || 0;
     const totalExpenses = Number(expensesResult?.total) || 0;
-    const estimatedProfit = todayPaidAmount - totalExpenses;
+    /** Freight booked (sum of consignment totals in range) minus all expenses in range (incl. manifest dispatch costs). */
+    const estimatedProfit = todayRevenue - totalExpenses;
 
     return {
       todayBookings: parseInt(todayBookingsResult?.count || '0'),
@@ -287,7 +289,6 @@ export class DashboardService {
       .createQueryBuilder('consignment')
       .select('DATE(consignment.createdAt)', 'date')
       .addSelect('COALESCE(SUM(consignment.totalAmount), 0)', 'revenue')
-      .addSelect('COALESCE(SUM(consignment.paidAmount), 0)', 'profit')
       .where('consignment.createdAt >= :start', { start: startDate })
       .andWhere('consignment.isActive = :isActive', { isActive: true });
     
@@ -297,8 +298,53 @@ export class DashboardService {
     
     const revenueChart = await revenueQuery.groupBy('DATE(consignment.createdAt)').orderBy('date', 'ASC').getRawMany();
 
-    const totalRevenue = revenueChart.reduce((sum, r) => sum + Number(r.revenue), 0);
-    const totalProfit = revenueChart.reduce((sum, r) => sum + Number(r.profit), 0);
+    const expenseByDayQuery = this.expenseRepository
+      .createQueryBuilder('expense')
+      .select('DATE(expense.createdAt)', 'date')
+      .addSelect('COALESCE(SUM(expense.amount), 0)', 'expenses')
+      .where('expense.createdAt >= :start', { start: startDate })
+      .andWhere('expense.isActive = :isActive', { isActive: true });
+    if (branchId) {
+      expenseByDayQuery.andWhere('expense.branchId = :branchId', { branchId });
+    }
+    const expenseByDay = await expenseByDayQuery
+      .groupBy('DATE(expense.createdAt)')
+      .orderBy('date', 'ASC')
+      .getRawMany();
+
+    const expenseByDayMap = new Map<string, number>();
+    for (const row of expenseByDay) {
+      expenseByDayMap.set(String(row.date), Number(row.expenses) || 0);
+    }
+
+    const revenueChartWithProfit = revenueChart.map((row) => {
+      const revenue = Number(row.revenue) || 0;
+      const dayExpenses = expenseByDayMap.get(String(row.date)) || 0;
+      return {
+        ...row,
+        revenue,
+        profit: revenue - dayExpenses,
+      };
+    });
+
+    const totalRevenue = revenueChartWithProfit.reduce((sum, r) => sum + Number(r.revenue), 0);
+    const totalExpensesInPeriod = Array.from(expenseByDayMap.values()).reduce((a, b) => a + b, 0);
+    const totalProfit = totalRevenue - totalExpensesInPeriod;
+
+    const expenseBreakdownQuery = this.expenseRepository
+      .createQueryBuilder('expense')
+      .select('expense.type', 'type')
+      .addSelect('COALESCE(SUM(expense.amount), 0)', 'amount')
+      .where('expense.createdAt >= :start', { start: startDate })
+      .andWhere('expense.isActive = :isActive', { isActive: true });
+    if (branchId) {
+      expenseBreakdownQuery.andWhere('expense.branchId = :branchId', { branchId });
+    }
+    const expenseBreakdownRows = await expenseBreakdownQuery.groupBy('expense.type').orderBy('amount', 'DESC').getRawMany();
+    const expenseBreakdown = expenseBreakdownRows.map((b) => ({
+      category: b.type || 'Other',
+      amount: Number(b.amount) || 0,
+    }));
 
     const totalConsignments = await this.consignmentRepository.count({
       where: { isActive: true },
@@ -326,10 +372,10 @@ export class DashboardService {
         totalConsignments,
         pendingDeliveries,
       },
-      revenueChart,
+      revenueChart: revenueChartWithProfit,
       branchPerformance: [],
       routePerformance: [],
-      expenseBreakdown: [],
+      expenseBreakdown,
       recentConsignments,
     };
   }
@@ -343,6 +389,7 @@ export class DashboardService {
     const [
       todayBookingsResult,
       revenueResult,
+      expensesTodayResult,
       pendingResult,
       deliveredResult,
       branchConsignments,
@@ -362,6 +409,13 @@ export class DashboardService {
         .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: today, end: endOfToday })
         .andWhere('consignment.fromBranchId = :branchId', { branchId })
         .andWhere('consignment.isActive = :isActive', { isActive: true })
+        .getRawOne(),
+      this.expenseRepository
+        .createQueryBuilder('expense')
+        .select('COALESCE(SUM(expense.amount), 0)', 'total')
+        .where('expense.createdAt >= :start AND expense.createdAt <= :end', { start: today, end: endOfToday })
+        .andWhere('expense.branchId = :branchId', { branchId })
+        .andWhere('expense.isActive = :isActive', { isActive: true })
         .getRawOne(),
       this.consignmentRepository
         .createQueryBuilder('consignment')
@@ -400,9 +454,14 @@ export class DashboardService {
       }),
     ]);
 
+    const todayRevenue = Number(revenueResult?.total) || 0;
+    const todayExpenses = Number(expensesTodayResult?.total) || 0;
+
     return {
       todayBookings: parseInt(todayBookingsResult?.count || '0'),
-      todayRevenue: Number(revenueResult?.total) || 0,
+      todayRevenue,
+      todayExpenses,
+      estimatedProfit: todayRevenue - todayExpenses,
       pendingDeliveries: parseInt(pendingResult?.count || '0'),
       deliveredToday: parseInt(deliveredResult?.count || '0'),
       dailyRevenue: [],
@@ -509,7 +568,7 @@ export class DashboardService {
     const branches = await this.branchRepository.find({ where: { isActive: true } });
     const performance = await Promise.all(
       branches.map(async (branch) => {
-        const [bookingsResult, revenueResult] = await Promise.all([
+        const [bookingsResult, revenueResult, expensesResult] = await Promise.all([
           this.consignmentRepository
             .createQueryBuilder('consignment')
             .select('COUNT(*)', 'count')
@@ -522,12 +581,20 @@ export class DashboardService {
             .where('consignment.fromBranchId = :branchId', { branchId: branch.id })
             .andWhere('consignment.isActive = :isActive', { isActive: true })
             .getRawOne(),
+          this.expenseRepository
+            .createQueryBuilder('expense')
+            .select('COALESCE(SUM(expense.amount), 0)', 'total')
+            .where('expense.branchId = :branchId', { branchId: branch.id })
+            .andWhere('expense.isActive = :isActive', { isActive: true })
+            .getRawOne(),
         ]);
+        const revenue = Number(revenueResult?.total) || 0;
+        const expenses = Number(expensesResult?.total) || 0;
         return {
           branchName: branch.name,
           totalBookings: parseInt(bookingsResult?.count || '0'),
-          revenue: Number(revenueResult?.total) || 0,
-          profit: 0,
+          revenue,
+          profit: revenue - expenses,
         };
       })
     );
@@ -575,36 +642,55 @@ export class DashboardService {
   async getRevenueChart(period: 'day' | 'week' | 'month' = 'day') {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     let startDate: Date;
-    let format: string;
     const dayMs = 24 * 60 * 60 * 1000;
-    
+
     switch (period) {
       case 'week':
         startDate = new Date(today.getTime() - 7 * dayMs);
-        format = 'YYYY-MM-DD';
         break;
       case 'month':
         startDate = new Date(today.getTime() - 30 * dayMs);
-        format = 'YYYY-MM-DD';
         break;
       default:
         startDate = today;
-        format = 'YYYY-MM-DD';
     }
 
-    const data = await this.consignmentRepository
+    // Get revenue from consignments
+    const revenueData = await this.consignmentRepository
       .createQueryBuilder('consignment')
       .select('DATE(consignment.createdAt)', 'date')
       .addSelect('COALESCE(SUM(consignment.totalAmount), 0)', 'revenue')
-      .addSelect('COALESCE(SUM(consignment.paidAmount), 0)', 'profit')
       .where('consignment.createdAt >= :start', { start: startDate })
       .andWhere('consignment.isActive = :isActive', { isActive: true })
       .groupBy('DATE(consignment.createdAt)')
       .orderBy('date', 'ASC')
       .getRawMany();
 
-    return data;
+    const expenseData = await this.expenseRepository
+      .createQueryBuilder('expense')
+      .select('DATE(expense.createdAt)', 'date')
+      .addSelect('COALESCE(SUM(expense.amount), 0)', 'expenses')
+      .where('expense.createdAt >= :start', { start: startDate })
+      .andWhere('expense.isActive = :isActive', { isActive: true })
+      .groupBy('DATE(expense.createdAt)')
+      .orderBy('date', 'ASC')
+      .getRawMany();
+
+    const expenseMap = new Map<string, number>();
+    for (const row of expenseData) {
+      expenseMap.set(String(row.date), Number(row.expenses) || 0);
+    }
+
+    return revenueData.map((row) => {
+      const revenue = Number(row.revenue) || 0;
+      const dayExpenses = expenseMap.get(String(row.date)) || 0;
+      return {
+        date: row.date,
+        revenue,
+        profit: revenue - dayExpenses,
+      };
+    });
   }
 }

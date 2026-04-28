@@ -6,6 +6,7 @@ import { Customer } from '../customers/entities/customer.entity';
 import { Payment } from '../payments/entities/payment.entity';
 import { ConsignmentStatus, PaymentStatus, PaymentType, PaymentMethod } from '../../common/enums/status.enum';
 import { User } from '../users/entities/user.entity';
+import { appendDailySequence, biltyNumberPrefix } from '../../common/helpers/document-numbers.helper';
 
 export enum CustomerType {
   SENDER = 'SENDER',
@@ -474,7 +475,12 @@ export class ConsignmentsService {
       Number(consignment.warehouse) +
       Number(consignment.misc) +
       Number(consignment.stTax) +
-      Number(consignment.ttTax);
+      Number(consignment.ttTax) +
+      Number(consignment.godown || 0) +
+      Number(consignment.handling || 0) +
+      Number(consignment.delivery || 0) +
+      Number(consignment.adjustment || 0) +
+      Number(consignment.previousBalance || 0);
 
     const additionalPaidAmount = dto.paidAmount ?? 0;
     consignment.paidAmount = Number(consignment.paidAmount) + additionalPaidAmount;
@@ -516,7 +522,10 @@ export class ConsignmentsService {
       .leftJoinAndSelect('consignment.fromCity', 'fromCity')
       .leftJoinAndSelect('consignment.toCity', 'toCity')
       .leftJoinAndSelect('consignment.itemType', 'itemType')
-      .where('consignment.status IN (:...statuses)', { statuses: ['ARRIVED'] });
+      .where('consignment.status IN (:...statuses)', {
+        statuses: [ConsignmentStatus.ARRIVED, ConsignmentStatus.DELIVERED],
+      })
+      .orderBy('consignment.updatedAt', 'DESC');
 
     if (biltyNumber) {
       queryBuilder.andWhere('consignment.biltyNumber LIKE :biltyNumber', { biltyNumber: `%${biltyNumber}%` });
@@ -530,13 +539,12 @@ export class ConsignmentsService {
   }
 
   private async generateBiltyNumber(): Promise<string> {
-    const date = new Date();
-    const prefix = `CNS${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
+    const prefix = biltyNumberPrefix();
     const count = await this.consignmentRepository.count({
       where: {
         biltyNumber: Like(`${prefix}%`),
       },
     });
-    return `${prefix}${(count + 1).toString().padStart(4, '0')}`;
+    return appendDailySequence(prefix, count + 1);
   }
 }

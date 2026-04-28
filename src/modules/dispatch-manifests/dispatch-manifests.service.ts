@@ -4,8 +4,10 @@ import { Repository, LessThanOrEqual, MoreThanOrEqual, Like } from 'typeorm';
 import { DispatchManifest } from './entities/dispatch-manifest.entity';
 import { ManifestItem } from './entities/manifest-item.entity';
 import { Consignment } from '../consignments/entities/consignment.entity';
+import { Expense } from '../expenses/entities/expense.entity';
 import { ManifestStatus, ConsignmentStatus } from '../../common/enums/status.enum';
 import { User } from '../users/entities/user.entity';
+import { appendDailySequence, manifestNumberPrefix } from '../../common/helpers/document-numbers.helper';
 
 export interface ManifestFilters {
   status?: ManifestStatus;
@@ -52,6 +54,8 @@ export class DispatchManifestsService {
     private manifestItemRepository: Repository<ManifestItem>,
     @InjectRepository(Consignment)
     private consignmentRepository: Repository<Consignment>,
+    @InjectRepository(Expense)
+    private expenseRepository: Repository<Expense>,
   ) {}
 
   async findAll(
@@ -271,6 +275,25 @@ export class DispatchManifestsService {
       throw new ForbiddenException('Cannot close - manifest is not in ARRIVED status');
     }
 
+    // Calculate profit: total revenue from consignments - total expenses
+    const items = await this.manifestItemRepository.find({
+      where: { manifestId },
+      relations: ['consignment'],
+    });
+
+    const totalRevenue = items.reduce((sum, item) => {
+      return sum + Number(item.consignment?.totalAmount || 0);
+    }, 0);
+
+    const expenses = await this.expenseRepository.find({
+      where: { manifestId },
+    });
+
+    const totalExpenses = expenses.reduce((sum, expense) => {
+      return sum + Number(expense.amount || 0);
+    }, 0);
+
+    manifest.profit = Number((totalRevenue - totalExpenses).toFixed(2));
     manifest.status = ManifestStatus.CLOSED;
     await this.manifestRepository.save(manifest);
 
@@ -278,14 +301,13 @@ export class DispatchManifestsService {
   }
 
   private async generateManifestNumber(): Promise<string> {
-    const date = new Date();
-    const prefix = `MAN${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
+    const prefix = manifestNumberPrefix();
     const count = await this.manifestRepository.count({
       where: {
         manifestNumber: Like(`${prefix}%`),
       },
     });
-    return `${prefix}${(count + 1).toString().padStart(4, '0')}`;
+    return appendDailySequence(prefix, count + 1);
   }
 
   private calculateTotals(items: any[]): ManifestTotals {
