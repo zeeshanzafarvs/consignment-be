@@ -173,10 +173,14 @@ export class ConsignmentsService {
       queryBuilder.andWhere('consignment.toBranchId = :toBranchId', { toBranchId: filters.toBranchId });
     }
     if (filters.dateFrom) {
-      queryBuilder.andWhere('consignment.createdAt >= :dateFrom', { dateFrom: new Date(filters.dateFrom) });
+      const dateFrom = new Date(filters.dateFrom);
+      dateFrom.setHours(0, 0, 0, 0);
+      queryBuilder.andWhere('consignment.createdAt >= :dateFrom', { dateFrom });
     }
     if (filters.dateTo) {
-      queryBuilder.andWhere('consignment.createdAt <= :dateTo', { dateTo: new Date(filters.dateTo) });
+      const dateTo = new Date(filters.dateTo);
+      dateTo.setHours(23, 59, 59, 999);
+      queryBuilder.andWhere('consignment.createdAt <= :dateTo', { dateTo });
     }
     if (filters.search) {
       queryBuilder.andWhere(

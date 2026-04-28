@@ -87,6 +87,17 @@ export class DispatchManifestsController {
     );
   }
 
+  @Get('by-consignment/:consignmentId')
+  @ApiOperation({ summary: 'Get manifest by consignment ID' })
+  @ApiResponse({ status: 200, description: 'Manifest retrieved successfully' })
+  async findByConsignmentId(@Param('consignmentId') consignmentId: string) {
+    const manifest = await this.manifestsService.findByConsignmentId(consignmentId);
+    if (!manifest) {
+      return ApiResponseHelper.success(null);
+    }
+    return ApiResponseHelper.success(manifest);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get manifest by ID with items and totals' })
   @ApiResponse({ status: 200, description: 'Manifest retrieved successfully' })

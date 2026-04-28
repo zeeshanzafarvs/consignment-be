@@ -133,6 +133,14 @@ export class DispatchManifestsService {
     return { manifest, items, totals };
   }
 
+  async findByConsignmentId(consignmentId: string): Promise<DispatchManifest | null> {
+    const item = await this.manifestItemRepository.findOne({
+      where: { consignmentId },
+      relations: ['manifest', 'manifest.vehicle', 'manifest.driver', 'manifest.fromBranch', 'manifest.toBranch'],
+    });
+    return item?.manifest || null;
+  }
+
   async create(dto: CreateManifestDto, userId?: string): Promise<DispatchManifest> {
     const manifestNumber = await this.generateManifestNumber();
 

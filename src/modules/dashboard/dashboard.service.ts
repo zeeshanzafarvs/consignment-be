@@ -1,10 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { Repository, MoreThanOrEqual, LessThanOrEqual, Between, In } from 'typeorm';
 import { Consignment } from '../consignments/entities/consignment.entity';
 import { Payment } from '../payments/entities/payment.entity';
 import { Expense } from '../expenses/entities/expense.entity';
 import { DispatchManifest } from '../dispatch-manifests/entities/dispatch-manifest.entity';
+import { Branch } from '../branches/entities/branch.entity';
+import { Vehicle } from '../vehicles/entities/vehicle.entity';
 import { ConsignmentStatus, PaymentStatus } from '../../common/enums/status.enum';
 import { User } from '../users/entities/user.entity';
 
@@ -27,6 +29,44 @@ export interface DashboardFilters {
   dateTo?: string;
 }
 
+export interface AdminDashboardStats {
+  summary: {
+    todayRevenue: number;
+    monthRevenue: number;
+    totalProfit: number;
+    totalConsignments: number;
+    pendingDeliveries: number;
+  };
+  revenueChart: { date: string; revenue: number; profit: number }[];
+  branchPerformance: { branchName: string; totalBookings: number; revenue: number; profit: number }[];
+  routePerformance: { route: string; bookings: number; revenue: number }[];
+  expenseBreakdown: { category: string; amount: number }[];
+  recentConsignments: any[];
+}
+
+export interface ManagerDashboardStats {
+  todayBookings: number;
+  todayRevenue: number;
+  pendingDeliveries: number;
+  deliveredToday: number;
+  dailyRevenue: { date: string; revenue: number }[];
+  bookingsCount: { date: string; count: number }[];
+  branchConsignments: any[];
+  incomingParcels: any[];
+  outgoingParcels: any[];
+  warehouseItems: any[];
+}
+
+export interface SiteOfficerDashboardStats {
+  todayBookings: number;
+  pendingDeliveries: number;
+  incomingParcels: number;
+  pendingConsignments: any[];
+  inTransitConsignments: any[];
+  arrivedConsignments: any[];
+  deliveredConsignments: any[];
+}
+
 @Injectable()
 export class DashboardService {
   constructor(
@@ -38,6 +78,10 @@ export class DashboardService {
     private expenseRepository: Repository<Expense>,
     @InjectRepository(DispatchManifest)
     private manifestRepository: Repository<DispatchManifest>,
+    @InjectRepository(Branch)
+    private branchRepository: Repository<Branch>,
+    @InjectRepository(Vehicle)
+    private vehicleRepository: Repository<Vehicle>,
   ) {}
 
   async getStats(filters: DashboardFilters, user?: User): Promise<DashboardStats> {
@@ -196,10 +240,17 @@ export class DashboardService {
     };
   }
 
-  async getRecentConsignments(limit = 10): Promise<Consignment[]> {
+  async getRecentConsignments(limit = 10, branchId?: string, status?: string): Promise<Consignment[]> {
+    const where: any = { isActive: true };
+    if (branchId) {
+      where.fromBranchId = branchId;
+    }
+    if (status) {
+      where.status = status;
+    }
     return this.consignmentRepository.find({
-      where: { isActive: true },
-      relations: ['sender', 'receiver', 'fromCity', 'toCity'],
+      where,
+      relations: ['sender', 'receiver', 'fromCity', 'toCity', 'fromBranch', 'toBranch'],
       order: { createdAt: 'DESC' },
       take: limit,
     });
@@ -212,5 +263,348 @@ export class DashboardService {
       order: { createdAt: 'DESC' },
       take: limit,
     });
+  }
+
+  async getAdminStats(period: 'day' | 'week' | 'month' = 'day', branchId?: string): Promise<AdminDashboardStats> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let startDate: Date;
+    const dayMs = 24 * 60 * 60 * 1000;
+    
+    switch (period) {
+      case 'week':
+        startDate = new Date(today.getTime() - 7 * dayMs);
+        break;
+      case 'month':
+        startDate = new Date(today.getTime() - 30 * dayMs);
+        break;
+      default:
+        startDate = today;
+    }
+
+    const revenueQuery = this.consignmentRepository
+      .createQueryBuilder('consignment')
+      .select('DATE(consignment.createdAt)', 'date')
+      .addSelect('COALESCE(SUM(consignment.totalAmount), 0)', 'revenue')
+      .addSelect('COALESCE(SUM(consignment.paidAmount), 0)', 'profit')
+      .where('consignment.createdAt >= :start', { start: startDate })
+      .andWhere('consignment.isActive = :isActive', { isActive: true });
+    
+    if (branchId) {
+      revenueQuery.andWhere('consignment.fromBranchId = :branchId', { branchId });
+    }
+    
+    const revenueChart = await revenueQuery.groupBy('DATE(consignment.createdAt)').orderBy('date', 'ASC').getRawMany();
+
+    const totalRevenue = revenueChart.reduce((sum, r) => sum + Number(r.revenue), 0);
+    const totalProfit = revenueChart.reduce((sum, r) => sum + Number(r.profit), 0);
+
+    const totalConsignments = await this.consignmentRepository.count({
+      where: { isActive: true },
+    });
+
+    const pendingDeliveries = await this.consignmentRepository.count({
+      where: { 
+        isActive: true,
+        status: In([ConsignmentStatus.BOOKED, ConsignmentStatus.IN_TRANSIT, ConsignmentStatus.ARRIVED]),
+      },
+    });
+
+    const recentConsignments = await this.consignmentRepository.find({
+      where: { isActive: true },
+      relations: ['sender', 'receiver', 'fromCity', 'toCity', 'fromBranch'],
+      order: { createdAt: 'DESC' },
+      take: 10,
+    });
+
+    return {
+      summary: {
+        todayRevenue: totalRevenue,
+        monthRevenue: totalRevenue,
+        totalProfit,
+        totalConsignments,
+        pendingDeliveries,
+      },
+      revenueChart,
+      branchPerformance: [],
+      routePerformance: [],
+      expenseBreakdown: [],
+      recentConsignments,
+    };
+  }
+
+  async getManagerStats(branchId: string): Promise<ManagerDashboardStats> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const [
+      todayBookingsResult,
+      revenueResult,
+      pendingResult,
+      deliveredResult,
+      branchConsignments,
+      incomingParcels,
+      outgoingParcels,
+    ] = await Promise.all([
+      this.consignmentRepository
+        .createQueryBuilder('consignment')
+        .select('COUNT(*)', 'count')
+        .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: today, end: endOfToday })
+        .andWhere('consignment.fromBranchId = :branchId', { branchId })
+        .andWhere('consignment.isActive = :isActive', { isActive: true })
+        .getRawOne(),
+      this.consignmentRepository
+        .createQueryBuilder('consignment')
+        .select('COALESCE(SUM(consignment.totalAmount), 0)', 'total')
+        .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: today, end: endOfToday })
+        .andWhere('consignment.fromBranchId = :branchId', { branchId })
+        .andWhere('consignment.isActive = :isActive', { isActive: true })
+        .getRawOne(),
+      this.consignmentRepository
+        .createQueryBuilder('consignment')
+        .select('COUNT(*)', 'count')
+        .where('consignment.toBranchId = :branchId', { branchId })
+        .andWhere('consignment.status NOT IN (:...statuses)', {
+          statuses: [ConsignmentStatus.DELIVERED, ConsignmentStatus.CANCELLED],
+        })
+        .andWhere('consignment.isActive = :isActive', { isActive: true })
+        .getRawOne(),
+      this.consignmentRepository
+        .createQueryBuilder('consignment')
+        .select('COUNT(*)', 'count')
+        .where('consignment.toBranchId = :branchId', { branchId })
+        .andWhere('consignment.status = :status', { status: ConsignmentStatus.DELIVERED })
+        .andWhere('consignment.deliveredAt >= :start AND consignment.deliveredAt <= :end', { start: today, end: endOfToday })
+        .andWhere('consignment.isActive = :isActive', { isActive: true })
+        .getRawOne(),
+      this.consignmentRepository.find({
+        where: { fromBranchId: branchId, isActive: true },
+        relations: ['sender', 'receiver', 'fromCity', 'toCity'],
+        order: { createdAt: 'DESC' },
+        take: 20,
+      }),
+      this.consignmentRepository.find({
+        where: { toBranchId: branchId, status: ConsignmentStatus.ARRIVED, isActive: true },
+        relations: ['sender', 'receiver', 'fromCity', 'toCity'],
+        order: { createdAt: 'DESC' },
+        take: 20,
+      }),
+      this.consignmentRepository.find({
+        where: { fromBranchId: branchId, status: ConsignmentStatus.IN_TRANSIT, isActive: true },
+        relations: ['sender', 'receiver', 'fromCity', 'toCity'],
+        order: { createdAt: 'DESC' },
+        take: 20,
+      }),
+    ]);
+
+    return {
+      todayBookings: parseInt(todayBookingsResult?.count || '0'),
+      todayRevenue: Number(revenueResult?.total) || 0,
+      pendingDeliveries: parseInt(pendingResult?.count || '0'),
+      deliveredToday: parseInt(deliveredResult?.count || '0'),
+      dailyRevenue: [],
+      bookingsCount: [],
+      branchConsignments,
+      incomingParcels,
+      outgoingParcels,
+      warehouseItems: [],
+    };
+  }
+
+  async getSiteOfficerStats(branchId: string): Promise<SiteOfficerDashboardStats> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const [
+      todayBookingsResult,
+      pendingResult,
+      incomingResult,
+      pendingConsignments,
+      inTransitConsignments,
+      arrivedConsignments,
+      deliveredConsignments,
+    ] = await Promise.all([
+      this.consignmentRepository
+        .createQueryBuilder('consignment')
+        .select('COUNT(*)', 'count')
+        .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: today, end: endOfToday })
+        .andWhere('consignment.fromBranchId = :branchId', { branchId })
+        .andWhere('consignment.isActive = :isActive', { isActive: true })
+        .getRawOne(),
+      this.consignmentRepository
+        .createQueryBuilder('consignment')
+        .select('COUNT(*)', 'count')
+        .where('consignment.toBranchId = :branchId', { branchId })
+        .andWhere('consignment.status NOT IN (:...statuses)', {
+          statuses: [ConsignmentStatus.DELIVERED, ConsignmentStatus.CANCELLED],
+        })
+        .andWhere('consignment.isActive = :isActive', { isActive: true })
+        .getRawOne(),
+      this.consignmentRepository
+        .createQueryBuilder('consignment')
+        .select('COUNT(*)', 'count')
+        .where('consignment.toBranchId = :branchId', { branchId })
+        .andWhere('consignment.status = :status', { status: ConsignmentStatus.ARRIVED })
+        .andWhere('consignment.isActive = :isActive', { isActive: true })
+        .getRawOne(),
+      this.consignmentRepository.find({
+        where: { 
+          fromBranchId: branchId,
+          status: ConsignmentStatus.BOOKED,
+          isActive: true 
+        },
+        relations: ['sender', 'receiver', 'fromCity', 'toCity'],
+        order: { createdAt: 'DESC' },
+        take: 20,
+      }),
+      this.consignmentRepository.find({
+        where: { 
+          fromBranchId: branchId,
+          status: ConsignmentStatus.IN_TRANSIT,
+          isActive: true 
+        },
+        relations: ['sender', 'receiver', 'fromCity', 'toCity'],
+        order: { createdAt: 'DESC' },
+        take: 20,
+      }),
+      this.consignmentRepository.find({
+        where: { 
+          toBranchId: branchId,
+          status: ConsignmentStatus.ARRIVED,
+          isActive: true 
+        },
+        relations: ['sender', 'receiver', 'fromCity', 'toCity'],
+        order: { createdAt: 'DESC' },
+        take: 20,
+      }),
+      this.consignmentRepository.find({
+        where: { 
+          toBranchId: branchId,
+          status: ConsignmentStatus.DELIVERED,
+          isActive: true 
+        },
+        relations: ['sender', 'receiver', 'fromCity', 'toCity'],
+        order: { deliveredAt: 'DESC' },
+        take: 20,
+      }),
+    ]);
+
+    return {
+      todayBookings: parseInt(todayBookingsResult?.count || '0'),
+      pendingDeliveries: parseInt(pendingResult?.count || '0'),
+      incomingParcels: parseInt(incomingResult?.count || '0'),
+      pendingConsignments,
+      inTransitConsignments,
+      arrivedConsignments,
+      deliveredConsignments,
+    };
+  }
+
+  async getBranchPerformance() {
+    const branches = await this.branchRepository.find({ where: { isActive: true } });
+    const performance = await Promise.all(
+      branches.map(async (branch) => {
+        const [bookingsResult, revenueResult] = await Promise.all([
+          this.consignmentRepository
+            .createQueryBuilder('consignment')
+            .select('COUNT(*)', 'count')
+            .where('consignment.fromBranchId = :branchId', { branchId: branch.id })
+            .andWhere('consignment.isActive = :isActive', { isActive: true })
+            .getRawOne(),
+          this.consignmentRepository
+            .createQueryBuilder('consignment')
+            .select('COALESCE(SUM(consignment.totalAmount), 0)', 'total')
+            .where('consignment.fromBranchId = :branchId', { branchId: branch.id })
+            .andWhere('consignment.isActive = :isActive', { isActive: true })
+            .getRawOne(),
+        ]);
+        return {
+          branchName: branch.name,
+          totalBookings: parseInt(bookingsResult?.count || '0'),
+          revenue: Number(revenueResult?.total) || 0,
+          profit: 0,
+        };
+      })
+    );
+    return performance;
+  }
+
+  async getRoutePerformance() {
+    const routes = await this.consignmentRepository
+      .createQueryBuilder('consignment')
+      .select('fromCity.name', 'fromCity')
+      .addSelect('toCity.name', 'toCity')
+      .addSelect('COUNT(*)', 'bookings')
+      .addSelect('COALESCE(SUM(consignment.totalAmount), 0)', 'revenue')
+      .leftJoin('consignment.fromCity', 'fromCity')
+      .leftJoin('consignment.toCity', 'toCity')
+      .where('consignment.isActive = :isActive', { isActive: true })
+      .groupBy('fromCity.name, toCity.name')
+      .orderBy('bookings', 'DESC')
+      .limit(10)
+      .getRawMany();
+    
+    return routes.map(r => ({
+      route: `${r.fromCity || '-'} → ${r.toCity || '-'}`,
+      bookings: parseInt(r.bookings) || 0,
+      revenue: Number(r.revenue) || 0,
+    }));
+  }
+
+  async getExpenseBreakdown() {
+    const breakdown = await this.expenseRepository
+      .createQueryBuilder('expense')
+      .select('expense.type', 'type')
+      .addSelect('COALESCE(SUM(expense.amount), 0)', 'amount')
+      .where('expense.isActive = :isActive', { isActive: true })
+      .groupBy('expense.type')
+      .orderBy('amount', 'DESC')
+      .getRawMany();
+    
+    return breakdown.map(b => ({
+      category: b.type || 'Other',
+      amount: Number(b.amount) || 0,
+    }));
+  }
+
+  async getRevenueChart(period: 'day' | 'week' | 'month' = 'day') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let startDate: Date;
+    let format: string;
+    const dayMs = 24 * 60 * 60 * 1000;
+    
+    switch (period) {
+      case 'week':
+        startDate = new Date(today.getTime() - 7 * dayMs);
+        format = 'YYYY-MM-DD';
+        break;
+      case 'month':
+        startDate = new Date(today.getTime() - 30 * dayMs);
+        format = 'YYYY-MM-DD';
+        break;
+      default:
+        startDate = today;
+        format = 'YYYY-MM-DD';
+    }
+
+    const data = await this.consignmentRepository
+      .createQueryBuilder('consignment')
+      .select('DATE(consignment.createdAt)', 'date')
+      .addSelect('COALESCE(SUM(consignment.totalAmount), 0)', 'revenue')
+      .addSelect('COALESCE(SUM(consignment.paidAmount), 0)', 'profit')
+      .where('consignment.createdAt >= :start', { start: startDate })
+      .andWhere('consignment.isActive = :isActive', { isActive: true })
+      .groupBy('DATE(consignment.createdAt)')
+      .orderBy('date', 'ASC')
+      .getRawMany();
+
+    return data;
   }
 }
