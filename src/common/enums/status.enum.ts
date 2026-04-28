@@ -63,7 +63,7 @@ export const ConsignmentStatusDisplay = {
 
 export const PaymentStatusDisplay = {
   [PaymentStatus.PAID]: 'Paid',
-  [PaymentStatus.TO_PAY]: 'To Pay',
+  [PaymentStatus.TO_PAY]: 'Pending',
   [PaymentStatus.PARTIAL]: 'Partial',
 };
 

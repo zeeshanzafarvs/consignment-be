@@ -13,8 +13,14 @@ export class Customer {
   @Column()
   name: string;
 
+  @Column({ nullable: true })
+  email: string;
+
   @Column()
   phone: string;
+
+  @Column({ nullable: true })
+  address: string;
 
   @Column({ nullable: true })
   cnic: string;

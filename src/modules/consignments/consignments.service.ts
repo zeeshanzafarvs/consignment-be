@@ -34,12 +34,14 @@ export interface CreateConsignmentDto {
   sender: {
     name: string;
     phone: string;
+    address?: string;
     cnic?: string;
     cityId?: string;
   };
   receiver: {
     name: string;
     phone: string;
+    address?: string;
     cnic?: string;
     cityId?: string;
   };
@@ -224,10 +226,18 @@ export class ConsignmentsService {
       sender = this.customerRepository.create({
         name: dto.sender.name,
         phone: dto.sender.phone,
+        address: dto.sender.address,
         cnic: dto.sender.cnic,
         cityId: dto.sender.cityId,
         type: CustomerType.SENDER,
       });
+      sender = await this.customerRepository.save(sender);
+    } else {
+      // Keep book-style customer info up to date when booking
+      sender.name = dto.sender.name || sender.name;
+      sender.address = dto.sender.address ?? sender.address;
+      sender.cnic = dto.sender.cnic ?? sender.cnic;
+      sender.cityId = dto.sender.cityId ?? sender.cityId;
       sender = await this.customerRepository.save(sender);
     }
 
@@ -236,10 +246,17 @@ export class ConsignmentsService {
       receiver = this.customerRepository.create({
         name: dto.receiver.name,
         phone: dto.receiver.phone,
+        address: dto.receiver.address,
         cnic: dto.receiver.cnic,
         cityId: dto.receiver.cityId,
         type: CustomerType.RECEIVER,
       });
+      receiver = await this.customerRepository.save(receiver);
+    } else {
+      receiver.name = dto.receiver.name || receiver.name;
+      receiver.address = dto.receiver.address ?? receiver.address;
+      receiver.cnic = dto.receiver.cnic ?? receiver.cnic;
+      receiver.cityId = dto.receiver.cityId ?? receiver.cityId;
       receiver = await this.customerRepository.save(receiver);
     }
 

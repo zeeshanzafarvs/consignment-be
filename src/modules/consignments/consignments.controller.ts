@@ -19,6 +19,10 @@ class SenderDto {
 
   @IsString()
   @IsOptional()
+  address?: string;
+
+  @IsString()
+  @IsOptional()
   cnic?: string;
 
   @IsString()
@@ -32,6 +36,10 @@ class ReceiverDto {
 
   @IsString()
   phone: string;
+
+  @IsString()
+  @IsOptional()
+  address?: string;
 
   @IsString()
   @IsOptional()
