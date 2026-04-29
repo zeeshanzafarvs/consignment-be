@@ -84,7 +84,8 @@ export class ReportsService {
         start: startOfDay,
         end: endOfDay,
       })
-      .andWhere('consignment.isActive = :isActive', { isActive: true });
+      .andWhere('consignment.isActive = :isActive', { isActive: true })
+      .andWhere('consignment.status != :status', { status: ConsignmentStatus.CANCELLED });
 
     if (branchId) {
       queryBuilder.andWhere('consignment.fromBranchId = :branchId', { branchId });
@@ -117,6 +118,7 @@ export class ReportsService {
           end: endOfDay,
         })
         .andWhere('consignment.isActive = :isActive', { isActive: true })
+        .andWhere('consignment.status != :status', { status: ConsignmentStatus.CANCELLED })
         .getRawOne(),
     ]);
 

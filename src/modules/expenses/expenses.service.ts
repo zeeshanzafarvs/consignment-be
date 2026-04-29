@@ -43,7 +43,8 @@ export class ExpensesService {
     const queryBuilder = this.expenseRepository
       .createQueryBuilder('expense')
       .leftJoinAndSelect('expense.branch', 'branch')
-      .leftJoinAndSelect('expense.manifest', 'manifest');
+      .leftJoinAndSelect('expense.manifest', 'manifest')
+      .andWhere('expense.isActive = :isActive', { isActive: true });
 
     if (branchId) {
       queryBuilder.andWhere('expense.branchId = :branchId', { branchId });

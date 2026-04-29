@@ -10,6 +10,13 @@ import { Vehicle } from '../vehicles/entities/vehicle.entity';
 import { ConsignmentStatus, PaymentStatus } from '../../common/enums/status.enum';
 import { User } from '../users/entities/user.entity';
 
+// Dashboard only shows these statuses
+const DASHBOARD_STATUSES = [
+  ConsignmentStatus.IN_TRANSIT,
+  ConsignmentStatus.ARRIVED,
+  ConsignmentStatus.DELIVERED,
+];
+
 export interface DashboardStats {
   todayBookings: number;
   todayRevenue: number;
@@ -146,7 +153,8 @@ export class DashboardService {
           .createQueryBuilder('consignment')
           .select('COUNT(*)', 'count')
           .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: startDate, end: endDate })
-          .andWhere('consignment.isActive = :isActive', { isActive: true });
+          .andWhere('consignment.isActive = :isActive', { isActive: true })
+          .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES });
         applyBranchFilter(q);
         return q.getRawOne();
       })(),
@@ -155,7 +163,8 @@ export class DashboardService {
           .createQueryBuilder('consignment')
           .select('COALESCE(SUM(consignment.totalAmount), 0)', 'total')
           .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: startDate, end: endDate })
-          .andWhere('consignment.isActive = :isActive', { isActive: true });
+          .andWhere('consignment.isActive = :isActive', { isActive: true })
+          .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES });
         applyBranchFilter(q);
         return q.getRawOne();
       })(),
@@ -164,7 +173,8 @@ export class DashboardService {
           .createQueryBuilder('consignment')
           .select('COALESCE(SUM(consignment.paidAmount), 0)', 'total')
           .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: startDate, end: endDate })
-          .andWhere('consignment.isActive = :isActive', { isActive: true });
+          .andWhere('consignment.isActive = :isActive', { isActive: true })
+          .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES });
         applyBranchFilter(q);
         return q.getRawOne();
       })(),
@@ -173,7 +183,8 @@ export class DashboardService {
           .createQueryBuilder('consignment')
           .select('COALESCE(SUM(consignment.remainingAmount), 0)', 'total')
           .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: startDate, end: endDate })
-          .andWhere('consignment.isActive = :isActive', { isActive: true });
+          .andWhere('consignment.isActive = :isActive', { isActive: true })
+          .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES });
         applyBranchFilter(q);
         return q.getRawOne();
       })(),
@@ -181,9 +192,7 @@ export class DashboardService {
         const query = this.consignmentRepository
           .createQueryBuilder('consignment')
           .select('COUNT(*)', 'count')
-          .where('consignment.status NOT IN (:...statuses)', {
-            statuses: [ConsignmentStatus.DELIVERED, ConsignmentStatus.CANCELLED],
-          })
+          .where('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES })
           .andWhere('consignment.isActive = :isActive', { isActive: true });
         applyBranchFilter(query);
         return query.getRawOne();
@@ -215,7 +224,8 @@ export class DashboardService {
           .createQueryBuilder('consignment')
           .select('COALESCE(SUM(consignment.remainingAmount), 0)', 'total')
           .where('consignment.paymentStatus = :status', { status: PaymentStatus.TO_PAY })
-          .andWhere('consignment.isActive = :isActive', { isActive: true });
+          .andWhere('consignment.isActive = :isActive', { isActive: true })
+          .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES });
         applyBranchFilter(q);
         return q.getRawOne();
       })(),
@@ -290,7 +300,8 @@ export class DashboardService {
       .select('DATE(consignment.createdAt)', 'date')
       .addSelect('COALESCE(SUM(consignment.totalAmount), 0)', 'revenue')
       .where('consignment.createdAt >= :start', { start: startDate })
-      .andWhere('consignment.isActive = :isActive', { isActive: true });
+      .andWhere('consignment.isActive = :isActive', { isActive: true })
+      .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES });
     
     if (branchId) {
       revenueQuery.andWhere('consignment.fromBranchId = :branchId', { branchId });
@@ -347,18 +358,18 @@ export class DashboardService {
     }));
 
     const totalConsignments = await this.consignmentRepository.count({
-      where: { isActive: true },
+      where: { isActive: true, status: In(DASHBOARD_STATUSES) },
     });
 
     const pendingDeliveries = await this.consignmentRepository.count({
       where: { 
         isActive: true,
-        status: In([ConsignmentStatus.BOOKED, ConsignmentStatus.IN_TRANSIT, ConsignmentStatus.ARRIVED]),
+        status: In([ConsignmentStatus.IN_TRANSIT, ConsignmentStatus.ARRIVED]),
       },
     });
 
     const recentConsignments = await this.consignmentRepository.find({
-      where: { isActive: true },
+      where: { isActive: true, status: In(DASHBOARD_STATUSES) },
       relations: ['sender', 'receiver', 'fromCity', 'toCity', 'fromBranch'],
       order: { createdAt: 'DESC' },
       take: 10,
@@ -402,6 +413,7 @@ export class DashboardService {
         .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: today, end: endOfToday })
         .andWhere('consignment.fromBranchId = :branchId', { branchId })
         .andWhere('consignment.isActive = :isActive', { isActive: true })
+        .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES })
         .getRawOne(),
       this.consignmentRepository
         .createQueryBuilder('consignment')
@@ -409,6 +421,7 @@ export class DashboardService {
         .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: today, end: endOfToday })
         .andWhere('consignment.fromBranchId = :branchId', { branchId })
         .andWhere('consignment.isActive = :isActive', { isActive: true })
+        .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES })
         .getRawOne(),
       this.expenseRepository
         .createQueryBuilder('expense')
@@ -421,9 +434,7 @@ export class DashboardService {
         .createQueryBuilder('consignment')
         .select('COUNT(*)', 'count')
         .where('consignment.toBranchId = :branchId', { branchId })
-        .andWhere('consignment.status NOT IN (:...statuses)', {
-          statuses: [ConsignmentStatus.DELIVERED, ConsignmentStatus.CANCELLED],
-        })
+        .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES })
         .andWhere('consignment.isActive = :isActive', { isActive: true })
         .getRawOne(),
       this.consignmentRepository
@@ -435,7 +446,7 @@ export class DashboardService {
         .andWhere('consignment.isActive = :isActive', { isActive: true })
         .getRawOne(),
       this.consignmentRepository.find({
-        where: { fromBranchId: branchId, isActive: true },
+        where: { fromBranchId: branchId, isActive: true, status: In(DASHBOARD_STATUSES) },
         relations: ['sender', 'receiver', 'fromCity', 'toCity'],
         order: { createdAt: 'DESC' },
         take: 20,
@@ -494,14 +505,13 @@ export class DashboardService {
         .where('consignment.createdAt >= :start AND consignment.createdAt <= :end', { start: today, end: endOfToday })
         .andWhere('consignment.fromBranchId = :branchId', { branchId })
         .andWhere('consignment.isActive = :isActive', { isActive: true })
+        .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES })
         .getRawOne(),
       this.consignmentRepository
         .createQueryBuilder('consignment')
         .select('COUNT(*)', 'count')
         .where('consignment.toBranchId = :branchId', { branchId })
-        .andWhere('consignment.status NOT IN (:...statuses)', {
-          statuses: [ConsignmentStatus.DELIVERED, ConsignmentStatus.CANCELLED],
-        })
+        .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES })
         .andWhere('consignment.isActive = :isActive', { isActive: true })
         .getRawOne(),
       this.consignmentRepository
@@ -514,7 +524,7 @@ export class DashboardService {
       this.consignmentRepository.find({
         where: { 
           fromBranchId: branchId,
-          status: ConsignmentStatus.BOOKED,
+          status: In(DASHBOARD_STATUSES),
           isActive: true 
         },
         relations: ['sender', 'receiver', 'fromCity', 'toCity'],
@@ -568,26 +578,28 @@ export class DashboardService {
     const branches = await this.branchRepository.find({ where: { isActive: true } });
     const performance = await Promise.all(
       branches.map(async (branch) => {
-        const [bookingsResult, revenueResult, expensesResult] = await Promise.all([
-          this.consignmentRepository
-            .createQueryBuilder('consignment')
-            .select('COUNT(*)', 'count')
-            .where('consignment.fromBranchId = :branchId', { branchId: branch.id })
-            .andWhere('consignment.isActive = :isActive', { isActive: true })
-            .getRawOne(),
-          this.consignmentRepository
-            .createQueryBuilder('consignment')
-            .select('COALESCE(SUM(consignment.totalAmount), 0)', 'total')
-            .where('consignment.fromBranchId = :branchId', { branchId: branch.id })
-            .andWhere('consignment.isActive = :isActive', { isActive: true })
-            .getRawOne(),
-          this.expenseRepository
-            .createQueryBuilder('expense')
-            .select('COALESCE(SUM(expense.amount), 0)', 'total')
-            .where('expense.branchId = :branchId', { branchId: branch.id })
-            .andWhere('expense.isActive = :isActive', { isActive: true })
-            .getRawOne(),
-        ]);
+         const [bookingsResult, revenueResult, expensesResult] = await Promise.all([
+           this.consignmentRepository
+             .createQueryBuilder('consignment')
+             .select('COUNT(*)', 'count')
+             .where('consignment.fromBranchId = :branchId', { branchId: branch.id })
+             .andWhere('consignment.isActive = :isActive', { isActive: true })
+             .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES })
+             .getRawOne(),
+           this.consignmentRepository
+             .createQueryBuilder('consignment')
+             .select('COALESCE(SUM(consignment.totalAmount), 0)', 'total')
+             .where('consignment.fromBranchId = :branchId', { branchId: branch.id })
+             .andWhere('consignment.isActive = :isActive', { isActive: true })
+             .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES })
+             .getRawOne(),
+           this.expenseRepository
+             .createQueryBuilder('expense')
+             .select('COALESCE(SUM(expense.amount), 0)', 'total')
+             .where('expense.branchId = :branchId', { branchId: branch.id })
+             .andWhere('expense.isActive = :isActive', { isActive: true })
+             .getRawOne(),
+         ]);
         const revenue = Number(revenueResult?.total) || 0;
         const expenses = Number(expensesResult?.total) || 0;
         return {
@@ -611,6 +623,7 @@ export class DashboardService {
       .leftJoin('consignment.fromCity', 'fromCity')
       .leftJoin('consignment.toCity', 'toCity')
       .where('consignment.isActive = :isActive', { isActive: true })
+      .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES })
       .groupBy('fromCity.name, toCity.name')
       .orderBy('bookings', 'DESC')
       .limit(10)
@@ -664,6 +677,7 @@ export class DashboardService {
       .addSelect('COALESCE(SUM(consignment.totalAmount), 0)', 'revenue')
       .where('consignment.createdAt >= :start', { start: startDate })
       .andWhere('consignment.isActive = :isActive', { isActive: true })
+      .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES })
       .groupBy('DATE(consignment.createdAt)')
       .orderBy('date', 'ASC')
       .getRawMany();
