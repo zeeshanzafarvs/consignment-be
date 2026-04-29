@@ -100,7 +100,7 @@ export class ExpensesController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Create new expense' })
   @ApiResponse({ status: 201, description: 'Expense created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -110,7 +110,7 @@ export class ExpensesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update expense' })
   @ApiResponse({ status: 200, description: 'Expense updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateExpenseDto) {
@@ -119,7 +119,7 @@ export class ExpensesController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete expense' })
   @ApiResponse({ status: 200, description: 'Expense deleted successfully' })
   async remove(@Param('id') id: string) {

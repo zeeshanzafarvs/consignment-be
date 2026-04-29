@@ -110,7 +110,7 @@ export class PaymentsController {
   }
 
   @Post('manual')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Create manual payment' })
   @ApiResponse({ status: 201, description: 'Payment created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -120,7 +120,7 @@ export class PaymentsController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Create new payment' })
   @ApiResponse({ status: 201, description: 'Payment created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -130,7 +130,7 @@ export class PaymentsController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update payment' })
   @ApiResponse({ status: 200, description: 'Payment updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdatePaymentDto) {

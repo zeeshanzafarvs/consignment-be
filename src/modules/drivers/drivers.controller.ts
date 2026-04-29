@@ -76,7 +76,7 @@ export class DriversController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create new driver' })
   @ApiResponse({ status: 201, description: 'Driver created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -86,7 +86,7 @@ export class DriversController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update driver' })
   @ApiResponse({ status: 200, description: 'Driver updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateDriverDto) {

@@ -62,7 +62,7 @@ export class VehiclesController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create new vehicle' })
   @ApiResponse({ status: 201, description: 'Vehicle created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -72,7 +72,7 @@ export class VehiclesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update vehicle' })
   @ApiResponse({ status: 200, description: 'Vehicle updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateVehicleDto) {

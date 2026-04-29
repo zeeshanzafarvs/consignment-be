@@ -168,9 +168,7 @@ export class SeederService {
     let created = 0, skipped = 0;
     const users = [
       { name: 'System Admin', email: 'admin@transport.com', password: 'Admin@123', role: UserRole.ADMIN },
-      { name: 'Lahore Manager', email: 'manager.lahore@transport.com', password: 'Manager@123', role: UserRole.MANAGER, branchName: 'Lahore Main Branch' },
       { name: 'Lahore Site Officer', email: 'officer.lahore@transport.com', password: 'Officer@123', role: UserRole.SITE_OFFICER, branchName: 'Lahore Main Branch' },
-      { name: 'Multan Manager', email: 'manager.multan@transport.com', password: 'Manager@123', role: UserRole.MANAGER, branchName: 'Multan Main Branch' },
       { name: 'Multan Site Officer', email: 'officer.multan@transport.com', password: 'Officer@123', role: UserRole.SITE_OFFICER, branchName: 'Multan Main Branch' },
     ];
 

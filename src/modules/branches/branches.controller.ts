@@ -67,7 +67,7 @@ export class BranchesController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create new branch' })
   @ApiResponse({ status: 201, description: 'Branch created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -77,7 +77,7 @@ export class BranchesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update branch' })
   @ApiResponse({ status: 200, description: 'Branch updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateBranchDto) {

@@ -54,7 +54,7 @@ export class UsersService {
     }
 
     // Only Admin can create Manager or Site Officer
-    if (data.role === UserRole.MANAGER || data.role === UserRole.SITE_OFFICER) {
+    if (data.role === UserRole.SITE_OFFICER) {
       if (currentUser.role !== UserRole.ADMIN) {
         throw new ForbiddenException('Only admins can create managers or site officers');
       }
@@ -95,16 +95,7 @@ export class UsersService {
     const user = await this.findOne(id);
 
     // Authorization checks
-    if (currentUser.role === UserRole.MANAGER) {
-      // Manager can only update users in their own branch
-      if (user.branchId !== currentUser.branchId) {
-        throw new ForbiddenException('Cannot update users outside your branch');
-      }
-      // Manager cannot change roles
-      if (data.role && data.role !== user.role) {
-        throw new ForbiddenException('Managers cannot change user roles');
-      }
-    } else if (currentUser.role === UserRole.SITE_OFFICER) {
+    if (currentUser.role === UserRole.SITE_OFFICER) {
       throw new ForbiddenException('Site officers cannot update users');
     }
 

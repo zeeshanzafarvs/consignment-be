@@ -107,7 +107,7 @@ export class DispatchManifestsController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Create new manifest' })
   @ApiResponse({ status: 201, description: 'Manifest created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -117,7 +117,7 @@ export class DispatchManifestsController {
   }
 
   @Post(':id/items')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Add consignment items to manifest' })
   @ApiResponse({ status: 201, description: 'Items added successfully' })
   async addItems(@Param('id') id: string, @Body() dto: AddItemsDto) {
@@ -126,7 +126,7 @@ export class DispatchManifestsController {
   }
 
   @Delete(':id/items/:itemId')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Remove item from manifest' })
   @ApiResponse({ status: 200, description: 'Item removed successfully' })
   async removeItem(@Param('id') id: string, @Param('itemId') itemId: string) {
@@ -135,7 +135,7 @@ export class DispatchManifestsController {
   }
 
   @Patch(':id/dispatch')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Dispatch manifest' })
   @ApiResponse({ status: 200, description: 'Manifest dispatched successfully' })
   async dispatch(@Param('id') id: string) {
@@ -144,7 +144,7 @@ export class DispatchManifestsController {
   }
 
   @Patch(':id/arrive')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Mark manifest as arrived' })
   @ApiResponse({ status: 200, description: 'Manifest arrived successfully' })
   async arrive(@Param('id') id: string) {
@@ -153,7 +153,7 @@ export class DispatchManifestsController {
   }
 
   @Patch(':id/close')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Close manifest' })
   @ApiResponse({ status: 200, description: 'Manifest closed successfully' })
   async close(@Param('id') id: string) {

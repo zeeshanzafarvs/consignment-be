@@ -15,7 +15,7 @@ export class ReportsController {
   constructor(private reportsService: ReportsService) {}
 
   @Get('daily-bookings')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Get daily booking register' })
   @ApiResponse({ status: 200, description: 'Report retrieved successfully' })
   @ApiQuery({ name: 'date', required: true })
@@ -30,7 +30,7 @@ export class ReportsController {
   }
 
   @Get('manifest/:manifestId')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Get vehicle loading list' })
   @ApiResponse({ status: 200, description: 'Report retrieved successfully' })
   async getManifestReport(@Param('manifestId') manifestId: string) {
@@ -39,7 +39,7 @@ export class ReportsController {
   }
 
   @Get('delivery-receipt/:consignmentId')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Get delivery receipt data' })
   @ApiResponse({ status: 200, description: 'Report retrieved successfully' })
   async getDeliveryReceipt(@Param('consignmentId') consignmentId: string) {
@@ -48,7 +48,7 @@ export class ReportsController {
   }
 
   @Get('customer-ledger/:customerId')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Get customer ledger' })
   @ApiResponse({ status: 200, description: 'Report retrieved successfully' })
   async getCustomerLedger(@Request() req: any, @Param('customerId') customerId: string) {

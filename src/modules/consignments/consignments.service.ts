@@ -148,8 +148,6 @@ export class ConsignmentsService {
 
     if (user?.role === 'SITE_OFFICER' && user.branchId) {
       queryBuilder.andWhere('(consignment.fromBranchId = :branchId OR consignment.toBranchId = :branchId)', { branchId: user.branchId });
-    } else if (user?.role === 'MANAGER' && user.branchId) {
-      queryBuilder.andWhere('(consignment.fromBranchId = :branchId OR consignment.toBranchId = :branchId)', { branchId: user.branchId });
     }
 
     if (filters.biltyNumber) {

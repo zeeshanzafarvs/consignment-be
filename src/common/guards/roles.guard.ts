@@ -67,7 +67,6 @@ export class BranchAccessGuard implements CanActivate {
       
       case BranchAccessRule.OWN_BRANCH:
         return user.role === UserRole.ADMIN || 
-               user.role === UserRole.MANAGER ||
                user.branchId === requestedBranchId;
       
       case BranchAccessRule.VIEW_ONLY:

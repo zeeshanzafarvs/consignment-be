@@ -422,7 +422,7 @@ export class ConsignmentsController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Create new consignment' })
   @ApiResponse({ status: 201, description: 'Consignment created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -432,7 +432,7 @@ export class ConsignmentsController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Update consignment' })
   @ApiResponse({ status: 200, description: 'Consignment updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateConsignmentDto) {
@@ -441,7 +441,7 @@ export class ConsignmentsController {
   }
 
   @Patch(':id/cancel')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Cancel consignment' })
   @ApiResponse({ status: 200, description: 'Consignment cancelled successfully' })
   async cancel(@Param('id') id: string) {
@@ -450,7 +450,7 @@ export class ConsignmentsController {
   }
 
   @Post(':id/deliver')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Deliver consignment' })
   @ApiResponse({ status: 200, description: 'Consignment delivered successfully' })
   async deliver(@Param('id') id: string, @Body() dto: DeliverConsignmentDto) {

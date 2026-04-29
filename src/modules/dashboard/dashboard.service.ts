@@ -110,11 +110,6 @@ export class DashboardService {
     const applyBranchFilter = (query: any) => {
       if (branchId) {
         query.andWhere('consignment.fromBranchId = :branchId', { branchId });
-      } else if (user?.role === 'MANAGER' && user.branchId) {
-        query.andWhere(
-          '(consignment.fromBranchId = :branchId OR consignment.toBranchId = :branchId)',
-          { branchId: user.branchId },
-        );
       } else if (user?.role === 'SITE_OFFICER' && user.branchId) {
         query.andWhere(
           '(consignment.fromBranchId = :branchId OR consignment.toBranchId = :branchId)',
@@ -131,8 +126,6 @@ export class DashboardService {
 
     if (branchId) {
       expenseQuery.andWhere('expense.branchId = :branchId', { branchId });
-    } else if (user?.role === 'MANAGER' && user.branchId) {
-      expenseQuery.andWhere('expense.branchId = :branchId', { branchId: user.branchId });
     } else if (user?.role === 'SITE_OFFICER' && user.branchId) {
       expenseQuery.andWhere('expense.branchId = :branchId', { branchId: user.branchId });
     }

@@ -48,7 +48,7 @@ export class DashboardController {
   }
 
   @Get('manager-stats')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get manager dashboard stats (branch specific)' })
   @ApiResponse({ status: 200, description: 'Manager stats retrieved successfully' })
   @ApiQuery({ name: 'branchId', required: false })
@@ -61,7 +61,7 @@ export class DashboardController {
   }
 
   @Get('site-officer-stats')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Get site officer dashboard stats' })
   @ApiResponse({ status: 200, description: 'Site officer stats retrieved successfully' })
   async getSiteOfficerStats(@Request() req: any) {

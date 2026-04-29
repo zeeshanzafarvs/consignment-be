@@ -225,7 +225,7 @@ export class RateListsController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create new rate list' })
   @ApiResponse({ status: 201, description: 'Rate list created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -235,7 +235,7 @@ export class RateListsController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update rate list' })
   @ApiResponse({ status: 200, description: 'Rate list updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateRateListDto) {
@@ -244,7 +244,7 @@ export class RateListsController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete rate list (soft delete)' })
   @ApiResponse({ status: 200, description: 'Rate list deleted successfully' })
   async remove(@Param('id') id: string) {

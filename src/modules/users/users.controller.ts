@@ -77,15 +77,11 @@ export class UsersController {
   }
 
   @Get('branch/:branchId')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get users for a specific branch' })
   @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
-  async findByBranch(@Param('branchId') branchId: string, @CurrentUser() currentUser: User) {
-    // Manager can only view their own branch
-    if (currentUser.role === UserRole.MANAGER && currentUser.branchId !== branchId) {
-      return ApiResponseHelper.error('Forbidden', 403);
-    }
+  async findByBranch(@Param('branchId') branchId: string) {
     const users = await this.usersService.findAllForBranch(branchId);
     return ApiResponseHelper.success(users);
   }
@@ -94,14 +90,8 @@ export class UsersController {
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiResponse({ status: 200, description: 'User retrieved successfully' })
   @ApiNotFoundResponse({ description: 'User not found' })
-  async findOne(@Param('id') id: string, @CurrentUser() currentUser: User) {
+  async findOne(@Param('id') id: string) {
     const user = await this.usersService.findOne(id);
-    
-    // Manager can only view users in their branch
-    if (currentUser.role === UserRole.MANAGER && user.branchId !== currentUser.branchId) {
-      return ApiResponseHelper.error('Forbidden', 403);
-    }
-    
     return ApiResponseHelper.success(user);
   }
 

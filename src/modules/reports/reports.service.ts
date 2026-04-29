@@ -89,13 +89,6 @@ export class ReportsService {
 
     if (branchId) {
       queryBuilder.andWhere('consignment.fromBranchId = :branchId', { branchId });
-    }
-
-    if (user?.role === 'MANAGER' && user.branchId) {
-      queryBuilder.andWhere(
-        '(consignment.fromBranchId = :branchId OR consignment.toBranchId = :branchId)',
-        { branchId: user.branchId },
-      );
     } else if (user?.role === 'SITE_OFFICER' && user.branchId) {
       queryBuilder.andWhere(
         '(consignment.fromBranchId = :branchId OR consignment.toBranchId = :branchId)',
@@ -228,12 +221,7 @@ export class ReportsService {
       })
       .andWhere('consignment.isActive = :isActive', { isActive: true });
 
-    if (user?.role === 'MANAGER' && user.branchId) {
-      queryBuilder.andWhere(
-        '(consignment.fromBranchId = :branchId OR consignment.toBranchId = :branchId)',
-        { branchId: user.branchId },
-      );
-    } else if (user?.role === 'SITE_OFFICER' && user.branchId) {
+    if (user?.role === 'SITE_OFFICER' && user.branchId) {
       queryBuilder.andWhere(
         '(consignment.fromBranchId = :branchId OR consignment.toBranchId = :branchId)',
         { branchId: user.branchId },

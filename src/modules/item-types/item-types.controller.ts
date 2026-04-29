@@ -51,7 +51,7 @@ export class ItemTypesController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create new item type' })
   @ApiResponse({ status: 201, description: 'Item type created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -61,7 +61,7 @@ export class ItemTypesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update item type' })
   @ApiResponse({ status: 200, description: 'Item type updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateItemTypeDto) {
