@@ -517,7 +517,7 @@ export class DashboardService {
       this.consignmentRepository.find({
         where: { 
           fromBranchId: branchId,
-          status: In(DASHBOARD_STATUSES),
+          status: ConsignmentStatus.BOOKED,
           isActive: true 
         },
         relations: ['sender', 'receiver', 'fromCity', 'toCity'],
