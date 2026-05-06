@@ -1,12 +1,14 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiForbiddenResponse } from '@nestjs/swagger';
-import { IsString, IsOptional, IsEmail } from 'class-validator';
+import { IsString, IsOptional, IsEmail, IsEnum } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { CustomersService } from './customers.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { ApiResponseHelper } from '../../common/helpers/api-response.helper';
+import { CustomerType } from '../../common/enums/status.enum';
 
 class CreateCustomerDto {
   @IsString()
@@ -14,6 +16,7 @@ class CreateCustomerDto {
 
   @IsEmail()
   @IsOptional()
+  @Transform(({ value }) => value === '' ? undefined : value)
   email?: string;
 
   @IsString()
@@ -27,6 +30,10 @@ class CreateCustomerDto {
   @IsString()
   @IsOptional()
   cityId?: string;
+
+  @IsEnum(CustomerType)
+  @IsOptional()
+  type?: CustomerType;
 }
 
 class UpdateCustomerDto {
@@ -36,6 +43,7 @@ class UpdateCustomerDto {
 
   @IsEmail()
   @IsOptional()
+  @Transform(({ value }) => value === '' ? undefined : value)
   email?: string;
 
   @IsString()
@@ -49,6 +57,10 @@ class UpdateCustomerDto {
   @IsString()
   @IsOptional()
   cityId?: string;
+
+  @IsEnum(CustomerType)
+  @IsOptional()
+  type?: CustomerType;
 }
 
 @ApiTags('Customers')
