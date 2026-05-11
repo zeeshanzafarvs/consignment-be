@@ -164,13 +164,15 @@ export class SeederService {
     return { created, skipped };
   }
 
-  private async seedUsers(): Promise<{ created: number; skipped: number }> {
-    let created = 0, skipped = 0;
-    const users = [
-      { name: 'System Admin', email: 'admin@transport.com', password: 'Admin@123', role: UserRole.ADMIN },
-      { name: 'Lahore Site Officer', email: 'officer.lahore@transport.com', password: 'Officer@123', role: UserRole.SITE_OFFICER, branchName: 'Lahore Main Branch' },
-      { name: 'Multan Site Officer', email: 'officer.multan@transport.com', password: 'Officer@123', role: UserRole.SITE_OFFICER, branchName: 'Multan Main Branch' },
-    ];
+   private async seedUsers(): Promise<{ created: number; skipped: number }> {
+     let created = 0, skipped = 0;
+     const users = [
+       { name: 'System Admin', email: 'admin@transport.com', password: 'Admin@123', role: UserRole.ADMIN },
+       { name: 'Lahore Site Officer', email: 'officer.lahore@transport.com', password: 'Officer@123', role: UserRole.SITE_OFFICER, branchName: 'Lahore Main Branch' },
+       { name: 'Multan Site Officer', email: 'officer.multan@transport.com', password: 'Officer@123', role: UserRole.SITE_OFFICER, branchName: 'Multan Main Branch' },
+       { name: 'Lahore Branch Manager', email: 'manager.lahore@transport.com', password: 'Manager@123', role: UserRole.BRANCH_MANAGER, branchName: 'Lahore Main Branch' },
+       { name: 'Multan Branch Manager', email: 'manager.multan@transport.com', password: 'Manager@123', role: UserRole.BRANCH_MANAGER, branchName: 'Multan Main Branch' },
+     ];
 
     for (const userData of users) {
       const existing = await this.userRepository.findOne({ where: { email: userData.email } });

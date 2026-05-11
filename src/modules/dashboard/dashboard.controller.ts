@@ -47,27 +47,27 @@ export class DashboardController {
     return ApiResponseHelper.success(stats);
   }
 
-  @Get('manager-stats')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get manager dashboard stats (branch specific)' })
-  @ApiResponse({ status: 200, description: 'Manager stats retrieved successfully' })
-  @ApiQuery({ name: 'branchId', required: false })
-  async getManagerStats(
-    @Request() req: any,
-    @Query('branchId') branchId?: string,
-  ) {
-    const stats = await this.dashboardService.getManagerStats(branchId || req.user.branchId);
-    return ApiResponseHelper.success(stats);
-  }
+   @Get('manager-stats')
+   @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER)
+   @ApiOperation({ summary: 'Get manager dashboard stats (branch specific)' })
+   @ApiResponse({ status: 200, description: 'Manager stats retrieved successfully' })
+   @ApiQuery({ name: 'branchId', required: false })
+   async getManagerStats(
+     @Request() req: any,
+     @Query('branchId') branchId?: string,
+   ) {
+     const stats = await this.dashboardService.getManagerStats(branchId || req.user.branchId);
+     return ApiResponseHelper.success(stats);
+   }
 
-  @Get('site-officer-stats')
-  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
-  @ApiOperation({ summary: 'Get site officer dashboard stats' })
-  @ApiResponse({ status: 200, description: 'Site officer stats retrieved successfully' })
-  async getSiteOfficerStats(@Request() req: any) {
-    const stats = await this.dashboardService.getSiteOfficerStats(req.user.branchId);
-    return ApiResponseHelper.success(stats);
-  }
+   @Get('site-officer-stats')
+   @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER, UserRole.BRANCH_MANAGER)
+   @ApiOperation({ summary: 'Get site officer dashboard stats' })
+   @ApiResponse({ status: 200, description: 'Site officer stats retrieved successfully' })
+   async getSiteOfficerStats(@Request() req: any) {
+     const stats = await this.dashboardService.getSiteOfficerStats(req.user.branchId);
+     return ApiResponseHelper.success(stats);
+   }
 
   @Get('recent-consignments')
   @ApiOperation({ summary: 'Get recent consignments' })

@@ -421,42 +421,51 @@ export class ConsignmentsController {
     return ApiResponseHelper.success(consignment);
   }
 
-  @Post()
-  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
-  @ApiOperation({ summary: 'Create new consignment' })
-  @ApiResponse({ status: 201, description: 'Consignment created successfully' })
-  @ApiForbiddenResponse({ description: 'Forbidden' })
-  async create(@Request() req: any, @Body() dto: CreateConsignmentDto) {
-    const consignment = await this.consignmentsService.create(dto, req.user?.id);
-    return ApiResponseHelper.created(consignment, 'Consignment created successfully');
-  }
+   @Post()
+   @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER, UserRole.BRANCH_MANAGER)
+   @ApiOperation({ summary: 'Create new consignment' })
+   @ApiResponse({ status: 201, description: 'Consignment created successfully' })
+   @ApiForbiddenResponse({ description: 'Forbidden' })
+   async create(@Request() req: any, @Body() dto: CreateConsignmentDto) {
+     const consignment = await this.consignmentsService.create(dto, req.user?.id);
+     return ApiResponseHelper.created(consignment, 'Consignment created successfully');
+   }
 
-  @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
-  @ApiOperation({ summary: 'Update consignment' })
-  @ApiResponse({ status: 200, description: 'Consignment updated successfully' })
-  async update(@Param('id') id: string, @Body() dto: UpdateConsignmentDto) {
-    const consignment = await this.consignmentsService.update(id, dto);
-    return ApiResponseHelper.updated(consignment, 'Consignment updated successfully');
-  }
+   @Patch(':id')
+   @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER, UserRole.BRANCH_MANAGER)
+   @ApiOperation({ summary: 'Update consignment' })
+   @ApiResponse({ status: 200, description: 'Consignment updated successfully' })
+   async update(@Param('id') id: string, @Body() dto: UpdateConsignmentDto) {
+     const consignment = await this.consignmentsService.update(id, dto);
+return ApiResponseHelper.updated(consignment, 'Consignment updated successfully');
+    }
 
-  @Patch(':id/cancel')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Cancel consignment' })
-  @ApiResponse({ status: 200, description: 'Consignment cancelled successfully' })
-  async cancel(@Param('id') id: string) {
-    const consignment = await this.consignmentsService.cancel(id);
-    return ApiResponseHelper.updated(consignment, 'Consignment cancelled successfully');
-  }
+    @Patch(':id/approve')
+    @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER)
+    @ApiOperation({ summary: 'Approve consignment' })
+    @ApiResponse({ status: 200, description: 'Consignment approved successfully' })
+    async approve(@Param('id') id: string) {
+      const consignment = await this.consignmentsService.approve(id);
+      return ApiResponseHelper.updated(consignment, 'Consignment approved successfully');
+    }
 
-  @Post(':id/deliver')
-  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
-  @ApiOperation({ summary: 'Deliver consignment' })
-  @ApiResponse({ status: 200, description: 'Consignment delivered successfully' })
-  async deliver(@Param('id') id: string, @Body() dto: DeliverConsignmentDto) {
-    const consignment = await this.consignmentsService.deliver(id, dto);
-    return ApiResponseHelper.updated(consignment, 'Consignment delivered successfully');
-  }
+    @Patch(':id/cancel')
+   @Roles(UserRole.ADMIN)
+   @ApiOperation({ summary: 'Cancel consignment' })
+   @ApiResponse({ status: 200, description: 'Consignment cancelled successfully' })
+   async cancel(@Param('id') id: string) {
+     const consignment = await this.consignmentsService.cancel(id);
+     return ApiResponseHelper.updated(consignment, 'Consignment cancelled successfully');
+   }
+
+   @Post(':id/deliver')
+   @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER, UserRole.BRANCH_MANAGER)
+   @ApiOperation({ summary: 'Deliver consignment' })
+   @ApiResponse({ status: 200, description: 'Consignment delivered successfully' })
+   async deliver(@Param('id') id: string, @Body() dto: DeliverConsignmentDto) {
+     const consignment = await this.consignmentsService.deliver(id, dto);
+     return ApiResponseHelper.updated(consignment, 'Consignment delivered successfully');
+   }
 
   @Get('delivery/search')
   @ApiOperation({ summary: 'Search consignment for delivery' })

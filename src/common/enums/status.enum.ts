@@ -1,5 +1,6 @@
 export enum ConsignmentStatus {
   BOOKED = 'BOOKED',
+  APPROVED = 'APPROVED',
   DISPATCHED = 'DISPATCHED',
   IN_TRANSIT = 'IN_TRANSIT',
   ARRIVED = 'ARRIVED',
@@ -54,6 +55,7 @@ export enum RateType {
 // Helper functions to get display names
 export const ConsignmentStatusDisplay = {
   [ConsignmentStatus.BOOKED]: 'Booked',
+  [ConsignmentStatus.APPROVED]: 'Approved',
   [ConsignmentStatus.DISPATCHED]: 'Dispatched',
   [ConsignmentStatus.IN_TRANSIT]: 'In Transit',
   [ConsignmentStatus.ARRIVED]: 'Arrived',

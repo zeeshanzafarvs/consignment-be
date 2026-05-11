@@ -106,51 +106,51 @@ export class DispatchManifestsController {
     return ApiResponseHelper.success(result);
   }
 
-  @Post()
-  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
-  @ApiOperation({ summary: 'Create new manifest' })
-  @ApiResponse({ status: 201, description: 'Manifest created successfully' })
-  @ApiForbiddenResponse({ description: 'Forbidden' })
-  async create(@Request() req: any, @Body() dto: CreateManifestDto) {
-    const manifest = await this.manifestsService.create(dto, req.user?.id);
-    return ApiResponseHelper.created(manifest, 'Manifest created successfully');
-  }
+   @Post()
+   @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER, UserRole.BRANCH_MANAGER)
+   @ApiOperation({ summary: 'Create new manifest' })
+   @ApiResponse({ status: 201, description: 'Manifest created successfully' })
+   @ApiForbiddenResponse({ description: 'Forbidden' })
+   async create(@Request() req: any, @Body() dto: CreateManifestDto) {
+     const manifest = await this.manifestsService.create(dto, req.user?.id);
+     return ApiResponseHelper.created(manifest, 'Manifest created successfully');
+   }
 
-  @Post(':id/items')
-  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
-  @ApiOperation({ summary: 'Add consignment items to manifest' })
-  @ApiResponse({ status: 201, description: 'Items added successfully' })
-  async addItems(@Param('id') id: string, @Body() dto: AddItemsDto) {
-    const items = await this.manifestsService.addItems(id, dto);
-    return ApiResponseHelper.created(items, 'Items added successfully');
-  }
+   @Post(':id/items')
+   @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER, UserRole.BRANCH_MANAGER)
+   @ApiOperation({ summary: 'Add consignment items to manifest' })
+   @ApiResponse({ status: 201, description: 'Items added successfully' })
+   async addItems(@Param('id') id: string, @Body() dto: AddItemsDto) {
+     const items = await this.manifestsService.addItems(id, dto);
+     return ApiResponseHelper.created(items, 'Items added successfully');
+   }
 
-  @Delete(':id/items/:itemId')
-  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
-  @ApiOperation({ summary: 'Remove item from manifest' })
-  @ApiResponse({ status: 200, description: 'Item removed successfully' })
-  async removeItem(@Param('id') id: string, @Param('itemId') itemId: string) {
-    await this.manifestsService.removeItem(id, itemId);
-    return ApiResponseHelper.deleted('Item removed successfully');
-  }
+   @Delete(':id/items/:itemId')
+   @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER, UserRole.BRANCH_MANAGER)
+   @ApiOperation({ summary: 'Remove item from manifest' })
+   @ApiResponse({ status: 200, description: 'Item removed successfully' })
+   async removeItem(@Param('id') id: string, @Param('itemId') itemId: string) {
+     await this.manifestsService.removeItem(id, itemId);
+     return ApiResponseHelper.deleted('Item removed successfully');
+   }
 
-  @Patch(':id/dispatch')
-  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
-  @ApiOperation({ summary: 'Dispatch manifest' })
-  @ApiResponse({ status: 200, description: 'Manifest dispatched successfully' })
-  async dispatch(@Param('id') id: string) {
-    const manifest = await this.manifestsService.dispatch(id);
-    return ApiResponseHelper.updated(manifest, 'Manifest dispatched successfully');
-  }
+   @Patch(':id/dispatch')
+   @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER, UserRole.BRANCH_MANAGER)
+   @ApiOperation({ summary: 'Dispatch manifest' })
+   @ApiResponse({ status: 200, description: 'Manifest dispatched successfully' })
+   async dispatch(@Param('id') id: string) {
+     const manifest = await this.manifestsService.dispatch(id);
+     return ApiResponseHelper.updated(manifest, 'Manifest dispatched successfully');
+   }
 
-  @Patch(':id/arrive')
-  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
-  @ApiOperation({ summary: 'Mark manifest as arrived' })
-  @ApiResponse({ status: 200, description: 'Manifest arrived successfully' })
-  async arrive(@Param('id') id: string) {
-    const manifest = await this.manifestsService.arrive(id);
-    return ApiResponseHelper.updated(manifest, 'Manifest arrived successfully');
-  }
+   @Patch(':id/arrive')
+   @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER, UserRole.BRANCH_MANAGER)
+   @ApiOperation({ summary: 'Mark manifest as arrived' })
+   @ApiResponse({ status: 200, description: 'Manifest arrived successfully' })
+   async arrive(@Param('id') id: string) {
+     const manifest = await this.manifestsService.arrive(id);
+     return ApiResponseHelper.updated(manifest, 'Manifest arrived successfully');
+   }
 
   @Patch(':id/close')
   @Roles(UserRole.ADMIN)

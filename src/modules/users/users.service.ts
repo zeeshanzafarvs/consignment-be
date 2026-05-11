@@ -41,29 +41,29 @@ export class UsersService {
     });
   }
 
-  async create(data: {
-    name: string;
-    email: string;
-    password: string;
-    role: UserRole;
-    branchId?: string;
-  }, currentUser: User) {
-    // Only Admin can create users
-    if (currentUser.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only admins can create users');
-    }
+   async create(data: {
+     name: string;
+     email: string;
+     password: string;
+     role: UserRole;
+     branchId?: string;
+   }, currentUser: User) {
+     // Only Admin can create users
+     if (currentUser.role !== UserRole.ADMIN) {
+       throw new ForbiddenException('Only admins can create users');
+     }
 
-    // Only Admin can create Manager or Site Officer
-    if (data.role === UserRole.SITE_OFFICER) {
-      if (currentUser.role !== UserRole.ADMIN) {
-        throw new ForbiddenException('Only admins can create managers or site officers');
-      }
-    }
+     // Only Admin can create Branch Manager or Site Officer
+     if (data.role === UserRole.SITE_OFFICER || data.role === UserRole.BRANCH_MANAGER) {
+       if (currentUser.role !== UserRole.ADMIN) {
+         throw new ForbiddenException('Only admins can create branch managers or site officers');
+       }
+     }
 
-    // Admin cannot create another Admin
-    if (data.role === UserRole.ADMIN) {
-      throw new BadRequestException('Cannot create admin users');
-    }
+     // Admin cannot create another Admin
+     if (data.role === UserRole.ADMIN) {
+       throw new BadRequestException('Cannot create admin users');
+     }
 
     // Check if email already exists
     const existingUser = await this.findByEmail(data.email);
@@ -86,23 +86,30 @@ export class UsersService {
     return this.userRepository.save(user);
   }
 
-  async update(id: string, data: {
-    name?: string;
-    email?: string;
-    role?: UserRole;
-    branchId?: string | null;
-  }, currentUser: User) {
-    const user = await this.findOne(id);
+   async update(id: string, data: {
+     name?: string;
+     email?: string;
+     role?: UserRole;
+     branchId?: string | null;
+   }, currentUser: User) {
+     const user = await this.findOne(id);
 
-    // Authorization checks
-    if (currentUser.role === UserRole.SITE_OFFICER) {
-      throw new ForbiddenException('Site officers cannot update users');
-    }
+     // Authorization checks
+     if (currentUser.role === UserRole.SITE_OFFICER) {
+       throw new ForbiddenException('Site officers cannot update users');
+     }
 
-    // Prevent changing to Admin
-    if (data.role === UserRole.ADMIN) {
-      throw new BadRequestException('Cannot change role to admin');
-    }
+     // Branch managers can only update users in their branch
+     if (currentUser.role === UserRole.BRANCH_MANAGER) {
+       if (user.branchId !== currentUser.branchId) {
+         throw new ForbiddenException('Branch managers can only update users in their branch');
+       }
+     }
+
+     // Prevent changing to Admin
+     if (data.role === UserRole.ADMIN) {
+       throw new BadRequestException('Cannot change role to admin');
+     }
 
     // Check for email conflict if email is being changed
     if (data.email && data.email !== user.email) {

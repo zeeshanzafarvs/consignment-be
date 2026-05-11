@@ -345,8 +345,8 @@ export class ConsignmentsService {
   async update(id: string, dto: UpdateConsignmentDto, userId?: string): Promise<Consignment> {
     const consignment = await this.findOne(id);
 
-    if (consignment.status !== ConsignmentStatus.BOOKED) {
-      throw new ForbiddenException('Only BOOKED consignments can be edited');
+    if (consignment.status !== ConsignmentStatus.BOOKED && consignment.status !== ConsignmentStatus.APPROVED) {
+      throw new ForbiddenException('Only BOOKED or APPROVED consignments can be edited');
     }
 
     if (dto.goodsDescription) {
@@ -430,6 +430,16 @@ export class ConsignmentsService {
       }
     }
 
+    await this.consignmentRepository.save(consignment);
+    return this.findOne(id);
+  }
+
+  async approve(id: string): Promise<Consignment> {
+    const consignment = await this.findOne(id);
+    if (consignment.status !== ConsignmentStatus.BOOKED) {
+      throw new BadRequestException('Only BOOKED consignments can be approved');
+    }
+    consignment.status = ConsignmentStatus.APPROVED;
     await this.consignmentRepository.save(consignment);
     return this.findOne(id);
   }

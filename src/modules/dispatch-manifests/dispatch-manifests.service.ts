@@ -175,8 +175,8 @@ export class DispatchManifestsService {
       if (!consignment) {
         throw new NotFoundException(`Consignment ${consignmentId} not found`);
       }
-      if (consignment.status !== ConsignmentStatus.BOOKED) {
-        throw new BadRequestException(`Consignment ${consignmentId} is not in BOOKED status`);
+      if (consignment.status !== ConsignmentStatus.APPROVED) {
+        throw new BadRequestException(`Consignment ${consignmentId} is not in APPROVED status`);
       }
       if (consignment.fromBranchId !== manifest.fromBranchId) {
         throw new BadRequestException(`Consignment ${consignmentId} does not belong to the same from branch`);
