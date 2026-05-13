@@ -115,8 +115,8 @@ export class Consignment {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   misc: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
-  previousBalance: number;
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, name: 'previousBalance' })
+  biltyKharcha: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   stTax: number;

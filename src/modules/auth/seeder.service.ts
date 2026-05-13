@@ -249,10 +249,10 @@ export class SeederService {
   private async seedRateLists(): Promise<{ created: number; skipped: number }> {
     let created = 0, skipped = 0;
     const rateLists = [
-      { fromCity: 'Lahore', toCity: 'Multan', itemType: 'Tyres', rateType: RateType.PER_ITEM, rate: 100, defaultLabor: 50, defaultLoading: 50, defaultUnloading: 50, defaultWarehouse: 0 },
-      { fromCity: 'Lahore', toCity: 'Karachi', itemType: 'Cartons', rateType: RateType.PER_ITEM, rate: 80, defaultLabor: 30, defaultLoading: 40, defaultUnloading: 40, defaultWarehouse: 0 },
-      { fromCity: 'Multan', toCity: 'Lahore', itemType: 'Bags', rateType: RateType.PER_ITEM, rate: 70, defaultLabor: 20, defaultLoading: 20, defaultUnloading: 20, defaultWarehouse: 0 },
-      { fromCity: 'Lahore', toCity: 'Rawalpindi', itemType: 'Electronics', rateType: RateType.PER_KG, rate: 25, defaultLabor: 40, defaultLoading: 40, defaultUnloading: 40, defaultWarehouse: 0 },
+      { fromCity: 'Lahore', toCity: 'Multan', itemType: 'Tyres', rateType: RateType.PER_ITEM, rate: 100 },
+      { fromCity: 'Lahore', toCity: 'Karachi', itemType: 'Cartons', rateType: RateType.PER_ITEM, rate: 80 },
+      { fromCity: 'Multan', toCity: 'Lahore', itemType: 'Bags', rateType: RateType.PER_ITEM, rate: 70 },
+      { fromCity: 'Lahore', toCity: 'Rawalpindi', itemType: 'Electronics', rateType: RateType.PER_KG, rate: 25 },
     ];
 
     for (const rateData of rateLists) {
@@ -276,10 +276,6 @@ export class SeederService {
           itemTypeId: itemType.id,
           rateType: rateData.rateType,
           rate: rateData.rate,
-          defaultLabor: rateData.defaultLabor,
-          defaultLoading: rateData.defaultLoading,
-          defaultUnloading: rateData.defaultUnloading,
-          defaultWarehouse: rateData.defaultWarehouse,
           active: true,
         });
         await this.rateListRepository.save(rateList);

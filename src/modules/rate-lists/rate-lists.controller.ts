@@ -34,26 +34,6 @@ class CreateRateListDto {
   @IsNumber()
   @IsOptional()
   @Min(0)
-  defaultLabor?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  defaultLoading?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  defaultUnloading?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  defaultWarehouse?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
   stTax?: number;
 
   @IsNumber()
@@ -87,26 +67,6 @@ class UpdateRateListDto {
   @IsOptional()
   @Min(0)
   rate?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  defaultLabor?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  defaultLoading?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  defaultUnloading?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  defaultWarehouse?: number;
 
   @IsNumber()
   @IsOptional()

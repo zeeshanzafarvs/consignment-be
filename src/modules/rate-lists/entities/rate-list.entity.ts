@@ -38,18 +38,6 @@ export class RateList {
   rate: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
-  defaultLabor: number;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
-  defaultLoading: number;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
-  defaultUnloading: number;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
-  defaultWarehouse: number;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   stTax: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })

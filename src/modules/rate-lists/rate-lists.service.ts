@@ -26,11 +26,6 @@ export interface CalculateFareDto {
 
 export interface FareCalculation {
   fare: number;
-  labor: number;
-  loading: number;
-  unloading: number;
-  warehouse: number;
-  misc: number;
   stTax: number;
   ttTax: number;
   totalAmount: number;
@@ -134,30 +129,23 @@ export class RateListsService {
     }
 
     let fare: number;
+    let stTax: number;
+    let ttTax: number;
     if (rateList.rateType === RateType.PER_ITEM) {
       fare = Number(rateList.rate) * quantity;
+      stTax = Number(rateList.stTax || 0) * quantity;
+      ttTax = Number(rateList.ttTax || 0) * quantity;
     } else {
       const weightValue = weight ?? 0;
       fare = Number(rateList.rate) * weightValue;
+      stTax = Number(rateList.stTax || 0) * weightValue;
+      ttTax = Number(rateList.ttTax || 0) * weightValue;
     }
 
-    const labor = Number(rateList.defaultLabor || 0);
-    const loading = Number(rateList.defaultLoading || 0);
-    const unloading = Number(rateList.defaultUnloading || 0);
-    const warehouse = Number(rateList.defaultWarehouse || 0);
-    const misc = 0;
-    const stTax = Number(rateList.stTax || 0);
-    const ttTax = Number(rateList.ttTax || 0);
-
-    const totalAmount = fare + labor + loading + unloading + warehouse + misc + stTax + ttTax;
+    const totalAmount = fare + stTax + ttTax;
 
     return {
       fare,
-      labor,
-      loading,
-      unloading,
-      warehouse,
-      misc,
       stTax,
       ttTax,
       totalAmount,

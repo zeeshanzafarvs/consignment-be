@@ -57,17 +57,10 @@ export interface CreateConsignmentDto {
   charges: {
     fare: number;
     loading?: number;
-    unloading?: number;
-    labor?: number;
     warehouse?: number;
-    misc?: number;
     stTax?: number;
     ttTax?: number;
-    godown?: number;
-    handling?: number;
-    delivery?: number;
-    adjustment?: number;
-    previousBalance?: number;
+    biltyKharcha?: number;
   };
   payment?: {
     paymentStatus?: PaymentStatus;
@@ -88,17 +81,10 @@ export interface UpdateConsignmentDto {
   charges?: {
     fare?: number;
     loading?: number;
-    unloading?: number;
-    labor?: number;
     warehouse?: number;
-    misc?: number;
     stTax?: number;
     ttTax?: number;
-    godown?: number;
-    handling?: number;
-    delivery?: number;
-    adjustment?: number;
-    previousBalance?: number;
+    biltyKharcha?: number;
   };
   payment?: {
     paidAmount?: number;
@@ -266,20 +252,13 @@ export class ConsignmentsService {
     const { 
       fare, 
       loading = 0, 
-      unloading = 0, 
-      labor = 0, 
       warehouse = 0, 
-      misc = 0, 
       stTax = 0, 
       ttTax = 0,
-      godown = 0,
-      handling = 0,
-      delivery = 0,
-      adjustment = 0,
-      previousBalance = 0
+      biltyKharcha = 0
     } = dto.charges;
     
-    const totalAmount = fare + loading + unloading + labor + warehouse + misc + stTax + ttTax + godown + handling + delivery + adjustment + previousBalance;
+    const totalAmount = fare + loading + warehouse + stTax + ttTax + biltyKharcha;
 
     const paidAmount = dto.payment?.paidAmount ?? 0;
     let paymentStatus: PaymentStatus;
@@ -308,17 +287,10 @@ export class ConsignmentsService {
       goodsDescription: dto.goodsDescription,
       fare,
       loading,
-      unloading,
-      labor,
       warehouse,
-      misc,
       stTax,
       ttTax,
-      godown,
-      handling,
-      delivery,
-      adjustment,
-      previousBalance,
+      biltyKharcha,
       totalAmount,
       paidAmount,
       remainingAmount,
@@ -375,38 +347,21 @@ export class ConsignmentsService {
     }
 
     if (dto.charges) {
-      const { 
-        fare, loading, unloading, labor, warehouse, misc, stTax, ttTax,
-        godown, handling, delivery, adjustment, previousBalance 
-      } = dto.charges;
+      const { fare, loading, warehouse, stTax, ttTax, biltyKharcha } = dto.charges;
       if (fare !== undefined) consignment.fare = fare;
       if (loading !== undefined) consignment.loading = loading;
-      if (unloading !== undefined) consignment.unloading = unloading;
-      if (labor !== undefined) consignment.labor = labor;
       if (warehouse !== undefined) consignment.warehouse = warehouse;
-      if (misc !== undefined) consignment.misc = misc;
       if (stTax !== undefined) consignment.stTax = stTax;
       if (ttTax !== undefined) consignment.ttTax = ttTax;
-      if (godown !== undefined) consignment.godown = godown;
-      if (handling !== undefined) consignment.handling = handling;
-      if (delivery !== undefined) consignment.delivery = delivery;
-      if (adjustment !== undefined) consignment.adjustment = adjustment;
-      if (previousBalance !== undefined) consignment.previousBalance = previousBalance;
+      if (biltyKharcha !== undefined) consignment.biltyKharcha = biltyKharcha;
 
       consignment.totalAmount =
         consignment.fare +
         consignment.loading +
-        consignment.unloading +
-        consignment.labor +
         consignment.warehouse +
-        consignment.misc +
         consignment.stTax +
         consignment.ttTax +
-        consignment.godown +
-        consignment.handling +
-        consignment.delivery +
-        consignment.adjustment +
-        consignment.previousBalance;
+        consignment.biltyKharcha;
     }
 
     if (dto.payment?.paidAmount !== undefined) {
@@ -488,7 +443,7 @@ export class ConsignmentsService {
       Number(consignment.handling || 0) +
       Number(consignment.delivery || 0) +
       Number(consignment.adjustment || 0) +
-      Number(consignment.previousBalance || 0);
+      Number(consignment.biltyKharcha || 0);
 
     const additionalPaidAmount = dto.paidAmount ?? 0;
     consignment.paidAmount = Number(consignment.paidAmount) + additionalPaidAmount;

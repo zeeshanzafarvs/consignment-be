@@ -63,22 +63,7 @@ class ChargesDto {
   @IsNumber()
   @IsOptional()
   @Min(0)
-  unloading?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  labor?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
   warehouse?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  misc?: number;
 
   @IsNumber()
   @IsOptional()
@@ -93,27 +78,7 @@ class ChargesDto {
   @IsNumber()
   @IsOptional()
   @Min(0)
-  godown?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  handling?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  delivery?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  adjustment?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  previousBalance?: number;
+  biltyKharcha?: number;
 }
 
 class PaymentDto {
@@ -195,22 +160,7 @@ class UpdateChargesDto {
   @IsNumber()
   @IsOptional()
   @Min(0)
-  unloading?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  labor?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
   warehouse?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  misc?: number;
 
   @IsNumber()
   @IsOptional()
@@ -225,27 +175,7 @@ class UpdateChargesDto {
   @IsNumber()
   @IsOptional()
   @Min(0)
-  godown?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  handling?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  delivery?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  adjustment?: number;
-
-  @IsNumber()
-  @IsOptional()
-  @Min(0)
-  previousBalance?: number;
+  biltyKharcha?: number;
 }
 
 class UpdatePaymentDto {
