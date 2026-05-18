@@ -115,6 +115,21 @@ export class Consignment {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   misc: number;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  adaaSt: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  tulip: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  ct: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  expressDelivery: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  homeDelivery: number;
+
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, name: 'previousBalance' })
   biltyKharcha: number;
 

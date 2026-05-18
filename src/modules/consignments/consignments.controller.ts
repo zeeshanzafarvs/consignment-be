@@ -240,17 +240,37 @@ class DeliverConsignmentDto {
   @IsNumber()
   @IsOptional()
   @Min(0)
+  unloading?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
   warehouse?: number;
 
   @IsNumber()
   @IsOptional()
   @Min(0)
-  labor?: number;
+  adaaSt?: number;
 
   @IsNumber()
   @IsOptional()
   @Min(0)
-  misc?: number;
+  tulip?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  ct?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  expressDelivery?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  homeDelivery?: number;
 
   @IsNumber()
   @IsOptional()

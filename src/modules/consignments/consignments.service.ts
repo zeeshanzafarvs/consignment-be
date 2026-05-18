@@ -93,9 +93,13 @@ export interface UpdateConsignmentDto {
 }
 
 export interface DeliverConsignmentDto {
+  unloading?: number;
   warehouse?: number;
-  labor?: number;
-  misc?: number;
+  adaaSt?: number;
+  tulip?: number;
+  ct?: number;
+  expressDelivery?: number;
+  homeDelivery?: number;
   paidAmount?: number;
   paymentMethod?: string;
   receiverName?: string;
@@ -422,21 +426,32 @@ export class ConsignmentsService {
       throw new BadRequestException('Consignment is already delivered');
     }
 
+    const additionalUnloading = dto.unloading ?? 0;
     const additionalWarehouse = dto.warehouse ?? 0;
-    const additionalLabor = dto.labor ?? 0;
-    const additionalMisc = dto.misc ?? 0;
+    const additionalAdaaSt = dto.adaaSt ?? 0;
+    const additionalTulip = dto.tulip ?? 0;
+    const additionalCt = dto.ct ?? 0;
+    const additionalExpressDelivery = dto.expressDelivery ?? 0;
+    const additionalHomeDelivery = dto.homeDelivery ?? 0;
 
+    consignment.unloading = Number(consignment.unloading) + additionalUnloading;
     consignment.warehouse = Number(consignment.warehouse) + additionalWarehouse;
-    consignment.labor = Number(consignment.labor) + additionalLabor;
-    consignment.misc = Number(consignment.misc) + additionalMisc;
+    consignment.adaaSt = Number(consignment.adaaSt || 0) + additionalAdaaSt;
+    consignment.tulip = Number(consignment.tulip || 0) + additionalTulip;
+    consignment.ct = Number(consignment.ct || 0) + additionalCt;
+    consignment.expressDelivery = Number(consignment.expressDelivery || 0) + additionalExpressDelivery;
+    consignment.homeDelivery = Number(consignment.homeDelivery || 0) + additionalHomeDelivery;
 
     consignment.totalAmount =
       Number(consignment.fare) +
       Number(consignment.loading) +
       Number(consignment.unloading) +
-      Number(consignment.labor) +
       Number(consignment.warehouse) +
-      Number(consignment.misc) +
+      Number(consignment.adaaSt || 0) +
+      Number(consignment.tulip || 0) +
+      Number(consignment.ct || 0) +
+      Number(consignment.expressDelivery || 0) +
+      Number(consignment.homeDelivery || 0) +
       Number(consignment.stTax) +
       Number(consignment.ttTax) +
       Number(consignment.godown || 0) +

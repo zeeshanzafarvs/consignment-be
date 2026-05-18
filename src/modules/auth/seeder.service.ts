@@ -348,7 +348,7 @@ export class SeederService {
         quantity: 10, weight: 50,
         goodsDescription: 'Tyres for transport',
         status: ConsignmentStatus.BOOKED, paymentStatus: PaymentStatus.PARTIAL,
-        fare: 1000, loading: 100, unloading: 100, labor: 50, totalAmount: 1250, paidAmount: 500,
+        fare: 1000, loading: 100, unloading: 100, labor: 50, totalAmount: 1250, paidAmount: 500, adaaSt: 0, tulip: 0, ct: 0, expressDelivery: 0, homeDelivery: 0,
         daysAgo: 0,
       },
       {
@@ -361,7 +361,7 @@ export class SeederService {
         quantity: 20, weight: 100,
         goodsDescription: 'Clothing items in cartons',
         status: ConsignmentStatus.IN_TRANSIT, paymentStatus: PaymentStatus.PAID,
-        fare: 1600, loading: 100, unloading: 100, labor: 50, totalAmount: 1850, paidAmount: 1850,
+        fare: 1600, loading: 100, unloading: 100, labor: 50, totalAmount: 1850, paidAmount: 1850, adaaSt: 0, tulip: 0, ct: 0, expressDelivery: 0, homeDelivery: 0,
         daysAgo: 1,
       },
       {
@@ -374,7 +374,7 @@ export class SeederService {
         quantity: 15, weight: 75,
         goodsDescription: 'Rice bags',
         status: ConsignmentStatus.ARRIVED, paymentStatus: PaymentStatus.TO_PAY,
-        fare: 1050, loading: 50, unloading: 50, labor: 20, totalAmount: 1170, paidAmount: 0,
+        fare: 1050, loading: 50, unloading: 50, labor: 20, totalAmount: 1170, paidAmount: 0, adaaSt: 0, tulip: 0, ct: 0, expressDelivery: 0, homeDelivery: 0,
         daysAgo: 2,
       },
     ];
