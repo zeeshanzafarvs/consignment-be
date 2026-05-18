@@ -125,7 +125,7 @@ export class RateListsService {
     }
 
     if (rateList.rateType === RateType.PER_KG && (!weight || weight <= 0)) {
-      throw new BadRequestException('Weight is required for PER_KG rate type');
+      throw new BadRequestException('Weight is required for Per Kg rate type');
     }
 
     let fare: number;
