@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiForbiddenResponse, ApiNotFoundResponse, ApiBadRequestResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiForbiddenResponse, ApiNotFoundResponse, ApiBadRequestResponse, ApiQuery } from '@nestjs/swagger';
 import { IsString, IsOptional, IsEnum, IsEmail, MinLength } from 'class-validator';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -9,6 +9,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { User } from './entities/user.entity';
 import { ApiResponseHelper } from '../../common/helpers/api-response.helper';
+import { PaginationQueryDto } from '../../common/dtos/pagination.dto';
 
 class CreateUserDto {
   @IsString()
@@ -69,11 +70,16 @@ export class UsersController {
   @Get()
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all users (Admin only)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
   @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
-  async findAll() {
-    const users = await this.usersService.findAll();
-    return ApiResponseHelper.success(users);
+  async findAll(@Query() query: PaginationQueryDto & { search?: string }) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const result = await this.usersService.findAll(page, limit, query.search);
+    return ApiResponseHelper.paginated(result.items, result.meta.total, result.meta.page, result.meta.limit);
   }
 
   @Get('branch/:branchId')

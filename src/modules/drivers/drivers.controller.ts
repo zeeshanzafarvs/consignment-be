@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiForbiddenResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiForbiddenResponse, ApiQuery } from '@nestjs/swagger';
 import { IsString, IsOptional } from 'class-validator';
 import { DriversService } from './drivers.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -7,6 +7,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { ApiResponseHelper } from '../../common/helpers/api-response.helper';
+import { PaginationQueryDto } from '../../common/dtos/pagination.dto';
 
 class CreateDriverDto {
   @IsString()
@@ -61,10 +62,15 @@ export class DriversController {
 
   @Get()
   @ApiOperation({ summary: 'Get all drivers' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
   @ApiResponse({ status: 200, description: 'Drivers retrieved successfully' })
-  async findAll() {
-    const drivers = await this.driversService.findAll();
-    return ApiResponseHelper.success(drivers);
+  async findAll(@Query() query: PaginationQueryDto & { search?: string }) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const result = await this.driversService.findAll(page, limit, query.search);
+    return ApiResponseHelper.paginated(result.items, result.meta.total, result.meta.page, result.meta.limit);
   }
 
   @Get(':id')

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ItemType } from './entities/item-type.entity';
+import { PaginationHelper, PaginatedResult } from '../../common/dtos/pagination.dto';
 
 @Injectable()
 export class ItemTypesService {
@@ -10,8 +11,23 @@ export class ItemTypesService {
     private itemTypeRepository: Repository<ItemType>,
   ) {}
 
-  async findAll() {
-    return this.itemTypeRepository.find({ where: { isActive: true } });
+  async findAll(page = 1, limit = 10, search?: string): Promise<PaginatedResult<ItemType>> {
+    const queryBuilder = this.itemTypeRepository.createQueryBuilder('itemType')
+      .where('itemType.isActive = :isActive', { isActive: true });
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(itemType.name ILIKE :search OR itemType.description ILIKE :search)',
+        { search: `%${search}%` }
+      );
+    }
+
+    const [items, total] = await queryBuilder
+      .skip(PaginationHelper.getSkip(page, limit))
+      .take(limit)
+      .getManyAndCount();
+
+    return PaginationHelper.paginate(items, total, page, limit);
   }
 
   async findOne(id: string) {

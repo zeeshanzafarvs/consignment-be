@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { UserRole } from '../../common/enums/user-role.enum';
+import { PaginationHelper, PaginatedResult } from '../../common/dtos/pagination.dto';
 
 @Injectable()
 export class UsersService {
@@ -12,8 +13,23 @@ export class UsersService {
     private userRepository: Repository<User>,
   ) {}
 
-  async findAll() {
-    return this.userRepository.find({ relations: ['branch'] });
+  async findAll(page = 1, limit = 10, search?: string): Promise<PaginatedResult<User>> {
+    const queryBuilder = this.userRepository.createQueryBuilder('user')
+      .leftJoinAndSelect('user.branch', 'branch');
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(user.name ILIKE :search OR user.email ILIKE :search)',
+        { search: `%${search}%` }
+      );
+    }
+
+    const [items, total] = await queryBuilder
+      .skip(PaginationHelper.getSkip(page, limit))
+      .take(limit)
+      .getManyAndCount();
+
+    return PaginationHelper.paginate(items, total, page, limit);
   }
 
   async findAllForBranch(branchId: string) {

@@ -120,6 +120,7 @@ export class RateListsController {
   @ApiQuery({ name: 'toCityId', required: false })
   @ApiQuery({ name: 'itemTypeId', required: false })
   @ApiQuery({ name: 'active', required: false })
+  @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })
   async findAll(
@@ -127,6 +128,7 @@ export class RateListsController {
     @Query('toCityId') toCityId?: string,
     @Query('itemTypeId') itemTypeId?: string,
     @Query('active') active?: string,
+    @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
@@ -136,6 +138,7 @@ export class RateListsController {
         toCityId,
         itemTypeId,
         active: active === 'true' ? true : active === 'false' ? false : undefined,
+        search,
       },
       {
         page: page ? parseInt(page) : 1,

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { Branch } from './entities/branch.entity';
+import { PaginationHelper, PaginatedResult } from '../../common/dtos/pagination.dto';
 
 @Injectable()
 export class BranchesService {
@@ -10,11 +11,24 @@ export class BranchesService {
     private branchRepository: Repository<Branch>,
   ) {}
 
-  async findAll() {
-    return this.branchRepository.find({ 
-      where: { isActive: true },
-      relations: ['city']
-    });
+  async findAll(page = 1, limit = 10, search?: string): Promise<PaginatedResult<Branch>> {
+    const queryBuilder = this.branchRepository.createQueryBuilder('branch')
+      .leftJoinAndSelect('branch.city', 'city')
+      .where('branch.isActive = :isActive', { isActive: true });
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(branch.name ILIKE :search OR city.name ILIKE :search OR branch.address ILIKE :search)',
+        { search: `%${search}%` }
+      );
+    }
+
+    const [items, total] = await queryBuilder
+      .skip(PaginationHelper.getSkip(page, limit))
+      .take(limit)
+      .getManyAndCount();
+
+    return PaginationHelper.paginate(items, total, page, limit);
   }
 
   async findOne(id: string) {

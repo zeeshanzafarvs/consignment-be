@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Driver } from './entities/driver.entity';
+import { PaginationHelper, PaginatedResult } from '../../common/dtos/pagination.dto';
 
 @Injectable()
 export class DriversService {
@@ -10,8 +11,23 @@ export class DriversService {
     private driverRepository: Repository<Driver>,
   ) {}
 
-  async findAll() {
-    return this.driverRepository.find({ where: { isActive: true } });
+  async findAll(page = 1, limit = 10, search?: string): Promise<PaginatedResult<Driver>> {
+    const queryBuilder = this.driverRepository.createQueryBuilder('driver')
+      .where('driver.isActive = :isActive', { isActive: true });
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(driver.name ILIKE :search OR driver.phone ILIKE :search OR driver.licenseNo ILIKE :search)',
+        { search: `%${search}%` }
+      );
+    }
+
+    const [items, total] = await queryBuilder
+      .skip(PaginationHelper.getSkip(page, limit))
+      .take(limit)
+      .getManyAndCount();
+
+    return PaginationHelper.paginate(items, total, page, limit);
   }
 
   async findOne(id: string) {

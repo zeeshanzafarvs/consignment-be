@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiForbiddenResponse } from '@nestjs/swagger';
-import { IsString, IsOptional, IsEmail, IsEnum } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiForbiddenResponse, ApiQuery } from '@nestjs/swagger';
+import { IsString, IsOptional, IsEmail, IsEnum, IsInt, Min, Max } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { CustomersService } from './customers.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -9,6 +9,8 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/user-role.enum';
 import { ApiResponseHelper } from '../../common/helpers/api-response.helper';
 import { CustomerType } from '../../common/enums/status.enum';
+import { PaginationQueryDto, PaginatedResult, PaginationHelper } from '../../common/dtos/pagination.dto';
+import { Customer } from './entities/customer.entity';
 
 class CreateCustomerDto {
   @IsString()
@@ -72,10 +74,15 @@ export class CustomersController {
 
   @Get()
   @ApiOperation({ summary: 'Get all customers' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
   @ApiResponse({ status: 200, description: 'Customers retrieved successfully' })
-  async findAll() {
-    const customers = await this.customersService.findAll();
-    return ApiResponseHelper.success(customers);
+  async findAll(@Query() query: PaginationQueryDto & { search?: string }) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const result = await this.customersService.findAll(page, limit, query.search);
+    return ApiResponseHelper.paginated(result.items, result.meta.total, result.meta.page, result.meta.limit);
   }
 
   @Get(':id')

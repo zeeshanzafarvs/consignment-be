@@ -9,6 +9,7 @@ export interface RateListFilters {
   toCityId?: string;
   itemTypeId?: string;
   active?: boolean;
+  search?: string;
 }
 
 export interface PaginationParams {
@@ -63,6 +64,12 @@ export class RateListsService {
     }
     if (active !== undefined) {
       queryBuilder.andWhere('rate.active = :active', { active });
+    }
+    if (filters.search) {
+      queryBuilder.andWhere(
+        '(fromCity.name ILIKE :search OR toCity.name ILIKE :search OR itemType.name ILIKE :search)',
+        { search: `%${filters.search}%` }
+      );
     }
 
     queryBuilder.skip(skip).take(limit).orderBy('rate.createdAt', 'DESC');
