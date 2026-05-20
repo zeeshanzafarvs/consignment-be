@@ -3,11 +3,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Consignment } from './entities/consignment.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { Payment } from '../payments/entities/payment.entity';
+import { Discount } from '../discounts/entities/discount.entity';
 import { ConsignmentsService } from './consignments.service';
 import { ConsignmentsController } from './consignments.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Consignment, Customer, Payment])],
+  imports: [TypeOrmModule.forFeature([Consignment, Customer, Payment, Discount])],
   controllers: [ConsignmentsController],
   providers: [ConsignmentsService],
   exports: [ConsignmentsService],

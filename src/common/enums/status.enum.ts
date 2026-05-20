@@ -47,6 +47,18 @@ export enum CustomerType {
   BOTH = 'BOTH',
 }
 
+export enum DiscountStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
+export enum DiscountApplyTo {
+  SENDER = 'SENDER',
+  RECEIVER = 'RECEIVER',
+  BOTH = 'BOTH',
+}
+
 export enum RateType {
   PER_ITEM = 'PER_ITEM',
   PER_KG = 'PER_KG',
@@ -105,4 +117,16 @@ export const CustomerTypeDisplay = {
 export const RateTypeDisplay = {
   [RateType.PER_ITEM]: 'Per Item',
   [RateType.PER_KG]: 'Per Kg',
+};
+
+export const DiscountStatusDisplay = {
+  [DiscountStatus.PENDING]: 'Pending',
+  [DiscountStatus.APPROVED]: 'Approved',
+  [DiscountStatus.REJECTED]: 'Rejected',
+};
+
+export const DiscountApplyToDisplay = {
+  [DiscountApplyTo.SENDER]: 'Sender',
+  [DiscountApplyTo.RECEIVER]: 'Receiver',
+  [DiscountApplyTo.BOTH]: 'Sender & Receiver',
 };

@@ -6,6 +6,7 @@ import { City } from '../../cities/entities/city.entity';
 import { ItemType } from '../../item-types/entities/item-type.entity';
 import { User } from '../../users/entities/user.entity';
 import { Payment } from '../../payments/entities/payment.entity';
+import { Discount } from '../../discounts/entities/discount.entity';
 
 @Entity('consignments')
 @Index('idx_consignment_bilty', ['biltyNumber'])
@@ -141,6 +142,32 @@ export class Consignment {
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   totalAmount: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  senderDiscountAmount: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  receiverDiscountAmount: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
+  senderDiscountPercentage: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
+  receiverDiscountPercentage: number;
+
+  @Column({ nullable: true })
+  senderDiscountId: string | null;
+
+  @ManyToOne(() => Discount, { nullable: true })
+  @JoinColumn({ name: 'senderDiscountId' })
+  senderDiscount: Discount;
+
+  @Column({ nullable: true })
+  receiverDiscountId: string | null;
+
+  @ManyToOne(() => Discount, { nullable: true })
+  @JoinColumn({ name: 'receiverDiscountId' })
+  receiverDiscount: Discount;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   paidAmount: number;

@@ -4,7 +4,8 @@ import { Repository, Like } from 'typeorm';
 import { Consignment } from './entities/consignment.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { Payment } from '../payments/entities/payment.entity';
-import { ConsignmentStatus, PaymentStatus, PaymentType, PaymentMethod } from '../../common/enums/status.enum';
+import { Discount } from '../discounts/entities/discount.entity';
+import { ConsignmentStatus, PaymentStatus, PaymentType, PaymentMethod, DiscountStatus, DiscountApplyTo } from '../../common/enums/status.enum';
 import { User } from '../users/entities/user.entity';
 import { appendDailySequence, biltyNumberPrefix } from '../../common/helpers/document-numbers.helper';
 
@@ -115,6 +116,8 @@ export class ConsignmentsService {
     private customerRepository: Repository<Customer>,
     @InjectRepository(Payment)
     private paymentRepository: Repository<Payment>,
+    @InjectRepository(Discount)
+    private discountRepository: Repository<Discount>,
   ) {}
 
   async findAll(
@@ -194,7 +197,7 @@ export class ConsignmentsService {
   async findOne(id: string): Promise<Consignment> {
     const consignment = await this.consignmentRepository.findOne({
       where: { id },
-      relations: ['sender', 'receiver', 'fromBranch', 'toBranch', 'fromCity', 'toCity', 'itemType', 'createdBy', 'payments'],
+      relations: ['sender', 'receiver', 'fromBranch', 'toBranch', 'fromCity', 'toCity', 'itemType', 'createdBy', 'payments', 'senderDiscount', 'receiverDiscount'],
     });
     if (!consignment) {
       throw new NotFoundException('Consignment not found');
@@ -205,7 +208,7 @@ export class ConsignmentsService {
   async findByBilty(biltyNumber: string): Promise<Consignment> {
     const consignment = await this.consignmentRepository.findOne({
       where: { biltyNumber },
-      relations: ['sender', 'receiver', 'fromBranch', 'toBranch', 'fromCity', 'toCity', 'itemType', 'createdBy', 'payments'],
+      relations: ['sender', 'receiver', 'fromBranch', 'toBranch', 'fromCity', 'toCity', 'itemType', 'createdBy', 'payments', 'senderDiscount', 'receiverDiscount'],
     });
     if (!consignment) {
       throw new NotFoundException('Consignment not found');
@@ -262,7 +265,46 @@ export class ConsignmentsService {
       biltyKharcha = 0
     } = dto.charges;
     
-    const totalAmount = fare + loading + warehouse + stTax + ttTax + biltyKharcha;
+    // Check sender discount
+    let senderDiscountAmount = 0;
+    let senderDiscountPercentage = 0;
+    let senderDiscountId: string | null = null;
+    const senderDiscount = await this.discountRepository
+      .createQueryBuilder('discount')
+      .where('discount.customerId = :customerId', { customerId: sender.id })
+      .andWhere('discount.isActive = :isActive', { isActive: true })
+      .andWhere('discount.status = :status', { status: DiscountStatus.APPROVED })
+      .andWhere('(discount.applyTo = :sender OR discount.applyTo = :both)', {
+        sender: DiscountApplyTo.SENDER,
+        both: DiscountApplyTo.BOTH,
+      })
+      .getOne();
+    if (senderDiscount) {
+      senderDiscountPercentage = Number(senderDiscount.discountPercentage);
+      senderDiscountAmount = (fare * senderDiscountPercentage) / 100;
+      senderDiscountId = senderDiscount.id;
+    }
+
+    let receiverDiscountPercentage = 0;
+    let receiverDiscountId: string | null = null;
+    const receiverDiscount = await this.discountRepository
+      .createQueryBuilder('discount')
+      .where('discount.customerId = :customerId', { customerId: receiver.id })
+      .andWhere('discount.isActive = :isActive', { isActive: true })
+      .andWhere('discount.status = :status', { status: DiscountStatus.APPROVED })
+      .andWhere('(discount.applyTo = :receiver OR discount.applyTo = :both)', {
+        receiver: DiscountApplyTo.RECEIVER,
+        both: DiscountApplyTo.BOTH,
+      })
+      .getOne();
+    if (receiverDiscount) {
+      receiverDiscountPercentage = Number(receiverDiscount.discountPercentage);
+      receiverDiscountId = receiverDiscount.id;
+    }
+
+    const discountedFare = fare - senderDiscountAmount;
+
+    const totalAmount = discountedFare + loading + warehouse + stTax + ttTax + biltyKharcha;
 
     const paidAmount = dto.payment?.paidAmount ?? 0;
     let paymentStatus: PaymentStatus;
@@ -296,6 +338,11 @@ export class ConsignmentsService {
       ttTax,
       biltyKharcha,
       totalAmount,
+      senderDiscountAmount,
+      senderDiscountPercentage,
+      senderDiscountId,
+      receiverDiscountPercentage,
+      receiverDiscountId,
       paidAmount,
       remainingAmount,
       status: ConsignmentStatus.BOOKED,
@@ -352,15 +399,21 @@ export class ConsignmentsService {
 
     if (dto.charges) {
       const { fare, loading, warehouse, stTax, ttTax, biltyKharcha } = dto.charges;
-      if (fare !== undefined) consignment.fare = fare;
+      if (fare !== undefined) {
+        consignment.fare = fare;
+        if (Number(consignment.senderDiscountPercentage) > 0) {
+          consignment.senderDiscountAmount = (fare * Number(consignment.senderDiscountPercentage)) / 100;
+        }
+      }
       if (loading !== undefined) consignment.loading = loading;
       if (warehouse !== undefined) consignment.warehouse = warehouse;
       if (stTax !== undefined) consignment.stTax = stTax;
       if (ttTax !== undefined) consignment.ttTax = ttTax;
       if (biltyKharcha !== undefined) consignment.biltyKharcha = biltyKharcha;
 
+      const discountedFare = Number(consignment.fare) - Number(consignment.senderDiscountAmount || 0);
       consignment.totalAmount =
-        consignment.fare +
+        discountedFare +
         consignment.loading +
         consignment.warehouse +
         consignment.stTax +
@@ -426,6 +479,8 @@ export class ConsignmentsService {
       throw new BadRequestException('Consignment is already delivered');
     }
 
+    const previousTotalAmount = Number(consignment.totalAmount || 0);
+    const previousPaidAmount = Number(consignment.paidAmount || 0);
     const additionalUnloading = dto.unloading ?? 0;
     const additionalWarehouse = dto.warehouse ?? 0;
     const additionalAdaaSt = dto.adaaSt ?? 0;
@@ -442,8 +497,45 @@ export class ConsignmentsService {
     consignment.expressDelivery = Number(consignment.expressDelivery || 0) + additionalExpressDelivery;
     consignment.homeDelivery = Number(consignment.homeDelivery || 0) + additionalHomeDelivery;
 
+    // Check receiver discount for delivery charges
+    let receiverDiscountAmount = 0;
+    let receiverDiscountPercentage = 0;
+    let receiverDiscountId: string | null = null;
+    if (consignment.receiverId) {
+      const receiverDiscount = await this.discountRepository
+        .createQueryBuilder('discount')
+        .where('discount.customerId = :customerId', { customerId: consignment.receiverId })
+        .andWhere('discount.isActive = :isActive', { isActive: true })
+        .andWhere('discount.status = :status', { status: DiscountStatus.APPROVED })
+        .andWhere('(discount.applyTo = :receiver OR discount.applyTo = :both)', {
+          receiver: DiscountApplyTo.RECEIVER,
+          both: DiscountApplyTo.BOTH,
+        })
+        .getOne();
+      if (receiverDiscount) {
+        receiverDiscountPercentage = Number(receiverDiscount.discountPercentage);
+        const newDeliveryCharges =
+          additionalUnloading +
+          additionalWarehouse +
+          additionalAdaaSt +
+          additionalTulip +
+          additionalCt +
+          additionalExpressDelivery +
+          additionalHomeDelivery;
+        const unpaidCurrentCharges = Math.max(0, previousTotalAmount - previousPaidAmount);
+        receiverDiscountAmount = ((unpaidCurrentCharges + newDeliveryCharges) * receiverDiscountPercentage) / 100;
+        receiverDiscountId = receiverDiscount.id;
+      }
+    }
+
+    const discountedFare = Number(consignment.fare) - Number(consignment.senderDiscountAmount || 0);
+
+    consignment.receiverDiscountAmount = receiverDiscountAmount;
+    consignment.receiverDiscountPercentage = receiverDiscountPercentage;
+    consignment.receiverDiscountId = receiverDiscountId;
+
     consignment.totalAmount =
-      Number(consignment.fare) +
+      discountedFare +
       Number(consignment.loading) +
       Number(consignment.unloading) +
       Number(consignment.warehouse) +
@@ -458,7 +550,8 @@ export class ConsignmentsService {
       Number(consignment.handling || 0) +
       Number(consignment.delivery || 0) +
       Number(consignment.adjustment || 0) +
-      Number(consignment.biltyKharcha || 0);
+      Number(consignment.biltyKharcha || 0) -
+      receiverDiscountAmount;
 
     const additionalPaidAmount = dto.paidAmount ?? 0;
     consignment.paidAmount = Number(consignment.paidAmount) + additionalPaidAmount;

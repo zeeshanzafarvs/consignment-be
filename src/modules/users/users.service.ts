@@ -87,6 +87,16 @@ export class UsersService {
       throw new ConflictException('Email already exists');
     }
 
+    // Enforce one manager per branch
+    if (data.role === UserRole.BRANCH_MANAGER && data.branchId) {
+      const existingManager = await this.userRepository.findOne({
+        where: { branchId: data.branchId, role: UserRole.BRANCH_MANAGER, isActive: true },
+      });
+      if (existingManager) {
+        throw new BadRequestException('This branch already has a Branch Manager assigned');
+      }
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(data.password, 12);
 
@@ -126,6 +136,18 @@ export class UsersService {
      if (data.role === UserRole.ADMIN) {
        throw new BadRequestException('Cannot change role to admin');
      }
+
+    // Enforce one manager per branch
+    const targetRole = data.role || user.role;
+    const targetBranchId = data.branchId !== undefined ? data.branchId : user.branchId;
+    if (targetRole === UserRole.BRANCH_MANAGER && targetBranchId) {
+      const existingManager = await this.userRepository.findOne({
+        where: { branchId: targetBranchId, role: UserRole.BRANCH_MANAGER, isActive: true },
+      });
+      if (existingManager && existingManager.id !== id) {
+        throw new BadRequestException('This branch already has a Branch Manager assigned');
+      }
+    }
 
     // Check for email conflict if email is being changed
     if (data.email && data.email !== user.email) {
