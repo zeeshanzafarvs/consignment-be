@@ -86,11 +86,6 @@ async function bootstrap() {
     customfavIcon: '/favicon.ico',
   });
 
-  const httpAdapter = app.getHttpAdapter();
-  httpAdapter.get('/', (_req, res) => {
-    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
-
   const port = process.env.PORT ?? 8080;
   await app.listen(port);
   logger.log(`Application is running on: http://localhost:${port}`);
