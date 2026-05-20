@@ -1,6 +1,6 @@
 # Consignment Management System API
 
-A comprehensive NestJS-based backend for managing consignments, dispatch manifests, payments, and reports for a transport/logistics company.
+A comprehensive NestJS-based backend for managing consignments, dispatch manifests, payments, and reports for a Pakistan based transport/logistics company.
 
 ## Table of Contents
 - [Overview](#overview)
