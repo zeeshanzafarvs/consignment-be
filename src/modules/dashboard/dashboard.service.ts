@@ -270,7 +270,7 @@ export class DashboardService {
     });
   }
 
-  async getAdminStats(period: 'day' | 'week' | 'month' = 'day', branchId?: string): Promise<AdminDashboardStats> {
+  async getAdminStats(period: 'day' | 'week' | 'month' | 'all' = 'all', branchId?: string): Promise<AdminDashboardStats> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -278,6 +278,9 @@ export class DashboardService {
     const dayMs = 24 * 60 * 60 * 1000;
     
     switch (period) {
+      case 'day':
+        startDate = today;
+        break;
       case 'week':
         startDate = new Date(today.getTime() - 7 * dayMs);
         break;
@@ -285,7 +288,7 @@ export class DashboardService {
         startDate = new Date(today.getTime() - 30 * dayMs);
         break;
       default:
-        startDate = today;
+        startDate = new Date('2000-01-01');
     }
 
     const revenueQuery = this.consignmentRepository
@@ -385,7 +388,7 @@ export class DashboardService {
     };
   }
 
-  async getManagerStats(branchId: string, period: 'day' | 'week' | 'month' = 'day'): Promise<ManagerDashboardStats> {
+  async getManagerStats(branchId: string, period: 'day' | 'week' | 'month' | 'all' = 'all'): Promise<ManagerDashboardStats> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const endOfToday = new Date();
@@ -394,6 +397,9 @@ export class DashboardService {
     const dayMs = 24 * 60 * 60 * 1000;
     let startDate: Date;
     switch (period) {
+      case 'day':
+        startDate = today;
+        break;
       case 'week':
         startDate = new Date(today.getTime() - 7 * dayMs);
         break;
@@ -401,7 +407,7 @@ export class DashboardService {
         startDate = new Date(today.getTime() - 30 * dayMs);
         break;
       default:
-        startDate = today;
+        startDate = new Date('2000-01-01');
     }
 
     const [
@@ -613,13 +619,16 @@ export class DashboardService {
     };
   }
 
-  async getBranchPerformance(branchId?: string, period: 'day' | 'week' | 'month' = 'day') {
+  async getBranchPerformance(branchId?: string, period: 'day' | 'week' | 'month' | 'all' = 'all') {
     if (branchId) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const dayMs = 24 * 60 * 60 * 1000;
       let startDate: Date;
       switch (period) {
+        case 'day':
+          startDate = today;
+          break;
         case 'week':
           startDate = new Date(today.getTime() - 7 * dayMs);
           break;
@@ -627,7 +636,7 @@ export class DashboardService {
           startDate = new Date(today.getTime() - 30 * dayMs);
           break;
         default:
-          startDate = today;
+          startDate = new Date('2000-01-01');
       }
 
       const [totalQuery, deliveredQuery, pendingQuery] = await Promise.all([
@@ -767,7 +776,7 @@ export class DashboardService {
     }));
   }
 
-  async getRevenueChart(period: 'day' | 'week' | 'month' = 'day', branchId?: string) {
+  async getRevenueChart(period: 'day' | 'week' | 'month' | 'all' = 'all', branchId?: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -775,6 +784,9 @@ export class DashboardService {
     const dayMs = 24 * 60 * 60 * 1000;
 
     switch (period) {
+      case 'day':
+        startDate = today;
+        break;
       case 'week':
         startDate = new Date(today.getTime() - 7 * dayMs);
         break;
@@ -782,7 +794,7 @@ export class DashboardService {
         startDate = new Date(today.getTime() - 30 * dayMs);
         break;
       default:
-        startDate = today;
+        startDate = new Date('2000-01-01');
     }
 
     // Get revenue from consignments
