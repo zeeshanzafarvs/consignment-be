@@ -94,7 +94,7 @@ export class CustomersController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER, UserRole.BRANCH_MANAGER)
   @ApiOperation({ summary: 'Create new customer' })
   @ApiResponse({ status: 201, description: 'Customer created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -104,7 +104,7 @@ export class CustomersController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER)
+  @Roles(UserRole.ADMIN, UserRole.SITE_OFFICER, UserRole.BRANCH_MANAGER)
   @ApiOperation({ summary: 'Update customer' })
   @ApiResponse({ status: 200, description: 'Customer updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateCustomerDto) {

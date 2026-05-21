@@ -57,7 +57,7 @@ export class ItemTypesController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Create new item type' })
   @ApiResponse({ status: 201, description: 'Item type created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -67,7 +67,7 @@ export class ItemTypesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Update item type' })
   @ApiResponse({ status: 200, description: 'Item type updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateItemTypeDto) {
@@ -76,7 +76,7 @@ export class ItemTypesController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Delete item type' })
   @ApiResponse({ status: 200, description: 'Item type deleted successfully' })
   async remove(@Param('id') id: string) {

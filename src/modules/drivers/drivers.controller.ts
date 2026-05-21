@@ -82,7 +82,7 @@ export class DriversController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Create new driver' })
   @ApiResponse({ status: 201, description: 'Driver created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -92,7 +92,7 @@ export class DriversController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Update driver' })
   @ApiResponse({ status: 200, description: 'Driver updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateDriverDto) {
@@ -101,7 +101,7 @@ export class DriversController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Delete driver' })
   @ApiResponse({ status: 200, description: 'Driver deleted successfully' })
   async remove(@Param('id') id: string) {

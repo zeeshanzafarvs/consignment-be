@@ -68,7 +68,7 @@ export class VehiclesController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Create new vehicle' })
   @ApiResponse({ status: 201, description: 'Vehicle created successfully' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -78,7 +78,7 @@ export class VehiclesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Update vehicle' })
   @ApiResponse({ status: 200, description: 'Vehicle updated successfully' })
   async update(@Param('id') id: string, @Body() dto: UpdateVehicleDto) {
@@ -87,7 +87,7 @@ export class VehiclesController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER, UserRole.SITE_OFFICER)
   @ApiOperation({ summary: 'Delete vehicle' })
   @ApiResponse({ status: 200, description: 'Vehicle deleted successfully' })
   async remove(@Param('id') id: string) {
