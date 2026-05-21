@@ -351,11 +351,12 @@ export class DashboardService {
     }));
 
     const totalConsignments = await this.consignmentRepository.count({
-      where: { isActive: true, status: In(DASHBOARD_STATUSES) },
+      where: { ...(branchId ? { fromBranchId: branchId } : {}), isActive: true, status: In(DASHBOARD_STATUSES) },
     });
 
     const pendingDeliveries = await this.consignmentRepository.count({
       where: { 
+        ...(branchId ? { fromBranchId: branchId } : {}),
         isActive: true,
         status: In([ConsignmentStatus.IN_TRANSIT, ConsignmentStatus.ARRIVED]),
       },
@@ -384,11 +385,24 @@ export class DashboardService {
     };
   }
 
-  async getManagerStats(branchId: string): Promise<ManagerDashboardStats> {
+  async getManagerStats(branchId: string, period: 'day' | 'week' | 'month' = 'day'): Promise<ManagerDashboardStats> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const endOfToday = new Date();
     endOfToday.setHours(23, 59, 59, 999);
+
+    const dayMs = 24 * 60 * 60 * 1000;
+    let startDate: Date;
+    switch (period) {
+      case 'week':
+        startDate = new Date(today.getTime() - 7 * dayMs);
+        break;
+      case 'month':
+        startDate = new Date(today.getTime() - 30 * dayMs);
+        break;
+      default:
+        startDate = today;
+    }
 
     const [
       todayBookingsResult,
@@ -399,6 +413,8 @@ export class DashboardService {
       branchConsignments,
       incomingParcels,
       outgoingParcels,
+      dailyRevenueResult,
+      bookingsCountResult,
     ] = await Promise.all([
       this.consignmentRepository
         .createQueryBuilder('consignment')
@@ -456,10 +472,40 @@ export class DashboardService {
         order: { createdAt: 'DESC' },
         take: 20,
       }),
+      this.consignmentRepository
+        .createQueryBuilder('consignment')
+        .select('DATE(consignment.createdAt)', 'date')
+        .addSelect('COALESCE(SUM(consignment.totalAmount), 0)', 'revenue')
+        .where('consignment.fromBranchId = :branchId', { branchId })
+        .andWhere('consignment.createdAt >= :start', { start: startDate })
+        .andWhere('consignment.isActive = :isActive', { isActive: true })
+        .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES })
+        .groupBy('DATE(consignment.createdAt)')
+        .getRawMany(),
+      this.consignmentRepository
+        .createQueryBuilder('consignment')
+        .select('DATE(consignment.createdAt)', 'date')
+        .addSelect('COUNT(*)', 'count')
+        .where('consignment.fromBranchId = :branchId', { branchId })
+        .andWhere('consignment.createdAt >= :start', { start: startDate })
+        .andWhere('consignment.isActive = :isActive', { isActive: true })
+        .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES })
+        .groupBy('DATE(consignment.createdAt)')
+        .getRawMany(),
     ]);
 
     const todayRevenue = Number(revenueResult?.total) || 0;
     const todayExpenses = Number(expensesTodayResult?.total) || 0;
+
+    const dailyRevenue = dailyRevenueResult.map((row: any) => ({
+      date: new Date(row.date).toString(),
+      revenue: Number(row.revenue) || 0,
+    }));
+
+    const bookingsCount = bookingsCountResult.map((row: any) => ({
+      date: new Date(row.date).toString(),
+      count: parseInt(row.count) || 0,
+    }));
 
     return {
       todayBookings: parseInt(todayBookingsResult?.count || '0'),
@@ -468,8 +514,8 @@ export class DashboardService {
       estimatedProfit: todayRevenue - todayExpenses,
       pendingDeliveries: parseInt(pendingResult?.count || '0'),
       deliveredToday: parseInt(deliveredResult?.count || '0'),
-      dailyRevenue: [],
-      bookingsCount: [],
+      dailyRevenue,
+      bookingsCount,
       branchConsignments,
       incomingParcels,
       outgoingParcels,
@@ -567,7 +613,83 @@ export class DashboardService {
     };
   }
 
-  async getBranchPerformance() {
+  async getBranchPerformance(branchId?: string, period: 'day' | 'week' | 'month' = 'day') {
+    if (branchId) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dayMs = 24 * 60 * 60 * 1000;
+      let startDate: Date;
+      switch (period) {
+        case 'week':
+          startDate = new Date(today.getTime() - 7 * dayMs);
+          break;
+        case 'month':
+          startDate = new Date(today.getTime() - 30 * dayMs);
+          break;
+        default:
+          startDate = today;
+      }
+
+      const [totalQuery, deliveredQuery, pendingQuery] = await Promise.all([
+        this.consignmentRepository
+          .createQueryBuilder('consignment')
+          .select('DATE(consignment.createdAt)', 'date')
+          .addSelect('COUNT(*)', 'count')
+          .where('consignment.fromBranchId = :branchId', { branchId })
+          .andWhere('consignment.isActive = :isActive', { isActive: true })
+          .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES })
+          .andWhere('consignment.createdAt >= :startDate', { startDate })
+           .groupBy('DATE(consignment.createdAt)')
+          .getRawMany(),
+        this.consignmentRepository
+          .createQueryBuilder('consignment')
+          .select('DATE(consignment.createdAt)', 'date')
+          .addSelect('COUNT(*)', 'count')
+          .where('consignment.fromBranchId = :branchId', { branchId })
+          .andWhere('consignment.isActive = :isActive', { isActive: true })
+          .andWhere('consignment.status = :delivered', { delivered: ConsignmentStatus.DELIVERED })
+          .andWhere('consignment.createdAt >= :startDate', { startDate })
+          .groupBy('DATE(consignment.createdAt)')
+          .getRawMany(),
+        this.consignmentRepository
+          .createQueryBuilder('consignment')
+          .select('DATE(consignment.createdAt)', 'date')
+          .addSelect('COUNT(*)', 'count')
+          .where('consignment.fromBranchId = :branchId', { branchId })
+          .andWhere('consignment.isActive = :isActive', { isActive: true })
+          .andWhere('consignment.status != :delivered', { delivered: ConsignmentStatus.DELIVERED })
+          .andWhere('consignment.status != :cancelled', { cancelled: ConsignmentStatus.CANCELLED })
+          .andWhere('consignment.createdAt >= :startDate', { startDate })
+          .groupBy('DATE(consignment.createdAt)')
+          .getRawMany(),
+      ]);
+
+      const totalMap = new Map<string, number>();
+      for (const row of totalQuery) {
+        totalMap.set(row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date), parseInt(row.count) || 0);
+      }
+      const deliveredMap = new Map<string, number>();
+      for (const row of deliveredQuery) {
+        deliveredMap.set(row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date), parseInt(row.count) || 0);
+      }
+      const pendingMap = new Map<string, number>();
+      for (const row of pendingQuery) {
+        pendingMap.set(row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date), parseInt(row.count) || 0);
+      }
+
+      const allDates = new Set<string>();
+      for (const row of totalQuery) allDates.add(row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date));
+      for (const row of deliveredQuery) allDates.add(row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date));
+      for (const row of pendingQuery) allDates.add(row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date));
+
+      return Array.from(allDates).map((date) => ({
+        date: new Date(date).toString(),
+        completedDeliveries: deliveredMap.get(date) || 0,
+        pendingOrders: pendingMap.get(date) || 0,
+        totalConsignments: totalMap.get(date) || 0,
+      }));
+    }
+
     const branches = await this.branchRepository.find({ where: { isActive: true } });
     const performance = await Promise.all(
       branches.map(async (branch) => {
@@ -645,7 +767,7 @@ export class DashboardService {
     }));
   }
 
-  async getRevenueChart(period: 'day' | 'week' | 'month' = 'day') {
+  async getRevenueChart(period: 'day' | 'week' | 'month' = 'day', branchId?: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -664,26 +786,28 @@ export class DashboardService {
     }
 
     // Get revenue from consignments
-    const revenueData = await this.consignmentRepository
+    const revenueQuery = this.consignmentRepository
       .createQueryBuilder('consignment')
       .select('DATE(consignment.createdAt)', 'date')
       .addSelect('COALESCE(SUM(consignment.totalAmount), 0)', 'revenue')
       .where('consignment.createdAt >= :start', { start: startDate })
       .andWhere('consignment.isActive = :isActive', { isActive: true })
-      .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES })
-      .groupBy('DATE(consignment.createdAt)')
-      .orderBy('date', 'ASC')
-      .getRawMany();
+      .andWhere('consignment.status IN (:...dashboardStatuses)', { dashboardStatuses: DASHBOARD_STATUSES });
+    if (branchId) {
+      revenueQuery.andWhere('consignment.fromBranchId = :branchId', { branchId });
+    }
+    const revenueData = await revenueQuery.groupBy('DATE(consignment.createdAt)').orderBy('date', 'ASC').getRawMany();
 
-    const expenseData = await this.expenseRepository
+    const expenseQuery = this.expenseRepository
       .createQueryBuilder('expense')
       .select('DATE(expense.createdAt)', 'date')
       .addSelect('COALESCE(SUM(expense.amount), 0)', 'expenses')
       .where('expense.createdAt >= :start', { start: startDate })
-      .andWhere('expense.isActive = :isActive', { isActive: true })
-      .groupBy('DATE(expense.createdAt)')
-      .orderBy('date', 'ASC')
-      .getRawMany();
+      .andWhere('expense.isActive = :isActive', { isActive: true });
+    if (branchId) {
+      expenseQuery.andWhere('expense.branchId = :branchId', { branchId });
+    }
+    const expenseData = await expenseQuery.groupBy('DATE(expense.createdAt)').orderBy('date', 'ASC').getRawMany();
 
     const expenseMap = new Map<string, number>();
     for (const row of expenseData) {

@@ -52,11 +52,13 @@ export class DashboardController {
    @ApiOperation({ summary: 'Get manager dashboard stats (branch specific)' })
    @ApiResponse({ status: 200, description: 'Manager stats retrieved successfully' })
    @ApiQuery({ name: 'branchId', required: false })
+   @ApiQuery({ name: 'period', required: false })
    async getManagerStats(
      @Request() req: any,
      @Query('branchId') branchId?: string,
+     @Query('period') period?: 'day' | 'week' | 'month',
    ) {
-     const stats = await this.dashboardService.getManagerStats(branchId || req.user.branchId);
+     const stats = await this.dashboardService.getManagerStats(branchId || req.user.branchId, period || 'day');
      return ApiResponseHelper.success(stats);
    }
 
@@ -103,8 +105,13 @@ export class DashboardController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get branch performance data' })
   @ApiResponse({ status: 200, description: 'Branch performance retrieved successfully' })
-  async getBranchPerformance() {
-    const performance = await this.dashboardService.getBranchPerformance();
+  @ApiQuery({ name: 'branchId', required: false })
+  @ApiQuery({ name: 'period', required: false })
+  async getBranchPerformance(
+    @Query('branchId') branchId?: string,
+    @Query('period') period?: 'day' | 'week' | 'month',
+  ) {
+    const performance = await this.dashboardService.getBranchPerformance(branchId, period || 'day');
     return ApiResponseHelper.success(performance);
   }
 
@@ -131,8 +138,9 @@ export class DashboardController {
   @ApiOperation({ summary: 'Get revenue chart data' })
   @ApiResponse({ status: 200, description: 'Revenue chart data retrieved successfully' })
   @ApiQuery({ name: 'period', required: false })
-  async getRevenueChart(@Query('period') period?: 'day' | 'week' | 'month') {
-    const data = await this.dashboardService.getRevenueChart(period || 'day');
+  @ApiQuery({ name: 'branchId', required: false })
+  async getRevenueChart(@Query('period') period?: 'day' | 'week' | 'month', @Query('branchId') branchId?: string) {
+    const data = await this.dashboardService.getRevenueChart(period || 'day', branchId);
     return ApiResponseHelper.success(data);
   }
 }
