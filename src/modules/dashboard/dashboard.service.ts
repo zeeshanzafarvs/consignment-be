@@ -1227,4 +1227,58 @@ export class DashboardService {
       closingBalance: cashIn - cashOut,
     };
   }
+
+  async getRevenueExpensesChart(
+    dateFrom?: string,
+    dateTo?: string,
+    branchId?: string,
+  ) {
+    return this.getProfitAndLoss('daily', dateFrom, dateTo, branchId);
+  }
+
+  async getPaymentTypeChart(
+    dateFrom?: string,
+    dateTo?: string,
+    branchId?: string,
+    paymentType?: string,
+    paymentMethod?: string,
+  ) {
+    const startDate = dateFrom ? new Date(dateFrom) : new Date('2000-01-01');
+    const endDate = dateTo ? new Date(dateTo) : new Date();
+
+    const query = this.paymentRepository
+      .createQueryBuilder('payment')
+      .select("DATE(payment.createdAt)", 'period')
+      .addSelect(`COALESCE(SUM(CASE WHEN payment.type = 'BOOKING' THEN payment.amount ELSE 0 END), 0)`, 'BOOKING')
+      .addSelect(`COALESCE(SUM(CASE WHEN payment.type = 'DELIVERY' THEN payment.amount ELSE 0 END), 0)`, 'DELIVERY')
+      .addSelect(`COALESCE(SUM(CASE WHEN payment.type = 'ADJUSTMENT' THEN payment.amount ELSE 0 END), 0)`, 'ADJUSTMENT')
+      .where('payment.isActive = :isActive', { isActive: true })
+      .andWhere('payment.createdAt >= :startDate', { startDate })
+      .andWhere('payment.createdAt <= :endDate', { endDate });
+
+    if (branchId) {
+      query.leftJoin('payment.consignment', 'consignment')
+        .andWhere('consignment.fromBranchId = :branchId', { branchId });
+    }
+
+    if (paymentType) {
+      query.andWhere('payment.type = :paymentType', { paymentType });
+    }
+
+    if (paymentMethod) {
+      query.andWhere('payment.method = :paymentMethod', { paymentMethod });
+    }
+
+    const rawData = await query
+      .groupBy("DATE(payment.createdAt)")
+      .orderBy('period', 'ASC')
+      .getRawMany();
+
+    return rawData.map((row) => ({
+      period: row.period,
+      BOOKING: Number(row.BOOKING) || 0,
+      DELIVERY: Number(row.DELIVERY) || 0,
+      ADJUSTMENT: Number(row.ADJUSTMENT) || 0,
+    }));
+  }
 }

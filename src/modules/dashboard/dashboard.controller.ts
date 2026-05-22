@@ -304,4 +304,52 @@ export class DashboardController {
     const summary = await this.dashboardService.getCashFlowSummary(dateFrom, dateTo, effectiveBranchId);
     return ApiResponseHelper.success(summary);
   }
+
+  @Get('accounting/revenue-expenses-chart')
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER)
+  @ApiOperation({ summary: 'Get revenue vs expenses chart data split by date' })
+  @ApiQuery({ name: 'dateFrom', required: false })
+  @ApiQuery({ name: 'dateTo', required: false })
+  @ApiQuery({ name: 'branchId', required: false })
+  async getRevenueExpensesChart(
+    @Request() req: any,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('branchId') branchId?: string,
+  ) {
+    const effectiveBranchId = this.getAccountingBranchId(req, branchId);
+    const data = await this.dashboardService.getRevenueExpensesChart(
+      dateFrom,
+      dateTo,
+      effectiveBranchId,
+    );
+    return ApiResponseHelper.success(data);
+  }
+
+  @Get('accounting/payment-type-chart')
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER)
+  @ApiOperation({ summary: 'Get payment type amounts chart data split by date' })
+  @ApiQuery({ name: 'dateFrom', required: false })
+  @ApiQuery({ name: 'dateTo', required: false })
+  @ApiQuery({ name: 'branchId', required: false })
+  @ApiQuery({ name: 'paymentType', required: false })
+  @ApiQuery({ name: 'paymentMethod', required: false })
+  async getPaymentTypeChart(
+    @Request() req: any,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('branchId') branchId?: string,
+    @Query('paymentType') paymentType?: string,
+    @Query('paymentMethod') paymentMethod?: string,
+  ) {
+    const effectiveBranchId = this.getAccountingBranchId(req, branchId);
+    const data = await this.dashboardService.getPaymentTypeChart(
+      dateFrom,
+      dateTo,
+      effectiveBranchId,
+      paymentType,
+      paymentMethod,
+    );
+    return ApiResponseHelper.success(data);
+  }
 }
