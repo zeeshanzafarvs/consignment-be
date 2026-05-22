@@ -14,6 +14,14 @@ import { ApiResponseHelper } from '../../common/helpers/api-response.helper';
 export class DashboardController {
   constructor(private dashboardService: DashboardService) {}
 
+  private getAccountingBranchId(req: any, requestedBranchId?: string): string | undefined {
+    if (req.user.role === UserRole.ADMIN) {
+      return requestedBranchId;
+    }
+
+    return req.user.branchId || '__NO_BRANCH_ASSIGNED__';
+  }
+
   @Get('stats')
   @ApiOperation({ summary: 'Get dashboard statistics' })
   @ApiResponse({ status: 200, description: 'Stats retrieved successfully' })
@@ -142,5 +150,158 @@ export class DashboardController {
   async getRevenueChart(@Query('period') period?: 'day' | 'week' | 'month' | 'all', @Query('branchId') branchId?: string) {
     const data = await this.dashboardService.getRevenueChart(period || 'all', branchId);
     return ApiResponseHelper.success(data);
+  }
+
+  // ===== ACCOUNTING DASHBOARD ENDPOINTS =====
+
+  @Get('accounting/metrics')
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER)
+  @ApiOperation({ summary: 'Get accounting dashboard overview metrics' })
+  @ApiResponse({ status: 200, description: 'Metrics retrieved successfully' })
+  @ApiQuery({ name: 'dateFrom', required: false })
+  @ApiQuery({ name: 'dateTo', required: false })
+  @ApiQuery({ name: 'branchId', required: false })
+  @ApiQuery({ name: 'paymentStatus', required: false })
+  async getAccountingMetrics(
+    @Request() req: any,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('branchId') branchId?: string,
+    @Query('paymentStatus') paymentStatus?: string,
+  ) {
+    const effectiveBranchId = this.getAccountingBranchId(req, branchId);
+    const metrics = await this.dashboardService.getAccountingDashboardMetrics(
+      dateFrom,
+      dateTo,
+      effectiveBranchId,
+      paymentStatus,
+    );
+    return ApiResponseHelper.success(metrics);
+  }
+
+  @Get('accounting/revenue-details')
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER)
+  @ApiOperation({ summary: 'Get detailed revenue management data' })
+  @ApiResponse({ status: 200, description: 'Revenue details retrieved successfully' })
+  @ApiQuery({ name: 'dateFrom', required: false })
+  @ApiQuery({ name: 'dateTo', required: false })
+  @ApiQuery({ name: 'branchId', required: false })
+  @ApiQuery({ name: 'paymentStatus', required: false })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  async getRevenueDetails(
+    @Request() req: any,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('branchId') branchId?: string,
+    @Query('paymentStatus') paymentStatus?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const effectiveBranchId = this.getAccountingBranchId(req, branchId);
+    const details = await this.dashboardService.getRevenueDetails(
+      dateFrom,
+      dateTo,
+      effectiveBranchId,
+      paymentStatus,
+      page ? parseInt(page) : 1,
+      limit ? parseInt(limit) : 10,
+    );
+    return ApiResponseHelper.success(details);
+  }
+
+  @Get('accounting/payment-tracking')
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER)
+  @ApiOperation({ summary: 'Get payment tracking data' })
+  @ApiResponse({ status: 200, description: 'Payment tracking retrieved successfully' })
+  @ApiQuery({ name: 'dateFrom', required: false })
+  @ApiQuery({ name: 'dateTo', required: false })
+  @ApiQuery({ name: 'branchId', required: false })
+  @ApiQuery({ name: 'paymentType', required: false })
+  @ApiQuery({ name: 'paymentMethod', required: false })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  async getPaymentTracking(
+    @Request() req: any,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('branchId') branchId?: string,
+    @Query('paymentType') paymentType?: string,
+    @Query('paymentMethod') paymentMethod?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const effectiveBranchId = this.getAccountingBranchId(req, branchId);
+    const tracking = await this.dashboardService.getPaymentTracking(
+      dateFrom,
+      dateTo,
+      effectiveBranchId,
+      paymentType,
+      paymentMethod,
+      page ? parseInt(page) : 1,
+      limit ? parseInt(limit) : 10,
+    );
+    return ApiResponseHelper.success(tracking);
+  }
+
+  @Get('accounting/profit-loss')
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER)
+  @ApiOperation({ summary: 'Get profit and loss data' })
+  @ApiResponse({ status: 200, description: 'Profit and loss data retrieved successfully' })
+  @ApiQuery({ name: 'period', required: false })
+  @ApiQuery({ name: 'dateFrom', required: false })
+  @ApiQuery({ name: 'dateTo', required: false })
+  @ApiQuery({ name: 'branchId', required: false })
+  async getProfitAndLoss(
+    @Request() req: any,
+    @Query('period') period?: 'daily' | 'monthly' | 'custom',
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('branchId') branchId?: string,
+  ) {
+    const effectiveBranchId = this.getAccountingBranchId(req, branchId);
+    const data = await this.dashboardService.getProfitAndLoss(
+      period || 'daily',
+      dateFrom,
+      dateTo,
+      effectiveBranchId,
+    );
+    return ApiResponseHelper.success(data);
+  }
+
+  @Get('accounting/cash-flow')
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER)
+  @ApiOperation({ summary: 'Get cash flow management data' })
+  @ApiResponse({ status: 200, description: 'Cash flow data retrieved successfully' })
+  @ApiQuery({ name: 'dateFrom', required: false })
+  @ApiQuery({ name: 'dateTo', required: false })
+  @ApiQuery({ name: 'branchId', required: false })
+  async getCashFlow(
+    @Request() req: any,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('branchId') branchId?: string,
+  ) {
+    const effectiveBranchId = this.getAccountingBranchId(req, branchId);
+    const data = await this.dashboardService.getCashFlow(dateFrom, dateTo, effectiveBranchId);
+    return ApiResponseHelper.success(data);
+  }
+
+  @Get('accounting/cash-flow-summary')
+  @Roles(UserRole.ADMIN, UserRole.BRANCH_MANAGER)
+  @ApiOperation({ summary: 'Get cash flow summary totals' })
+  @ApiResponse({ status: 200, description: 'Cash flow summary retrieved successfully' })
+  @ApiQuery({ name: 'dateFrom', required: false })
+  @ApiQuery({ name: 'dateTo', required: false })
+  @ApiQuery({ name: 'branchId', required: false })
+  async getCashFlowSummary(
+    @Request() req: any,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('branchId') branchId?: string,
+  ) {
+    const effectiveBranchId = this.getAccountingBranchId(req, branchId);
+    const summary = await this.dashboardService.getCashFlowSummary(dateFrom, dateTo, effectiveBranchId);
+    return ApiResponseHelper.success(summary);
   }
 }

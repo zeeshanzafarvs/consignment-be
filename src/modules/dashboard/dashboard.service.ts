@@ -836,4 +836,395 @@ export class DashboardService {
       };
     });
   }
+
+  // ===== ACCOUNTING DASHBOARD METHODS =====
+
+  /**
+   * Get accounting dashboard overview metrics
+   */
+  async getAccountingDashboardMetrics(
+    dateFrom?: string,
+    dateTo?: string,
+    branchId?: string,
+    paymentStatus?: string,
+  ) {
+    const startDate = dateFrom ? new Date(dateFrom) : new Date('2000-01-01');
+    const endDate = dateTo ? new Date(dateTo) : new Date();
+
+    const baseConsignmentQuery = this.consignmentRepository
+      .createQueryBuilder('consignment')
+      .where('consignment.isActive = :isActive', { isActive: true })
+      .andWhere('consignment.createdAt >= :startDate', { startDate })
+      .andWhere('consignment.createdAt <= :endDate', { endDate });
+
+    if (branchId) {
+      baseConsignmentQuery.andWhere('consignment.fromBranchId = :branchId', { branchId });
+    }
+
+    if (paymentStatus) {
+      baseConsignmentQuery.andWhere('consignment.paymentStatus = :paymentStatus', { paymentStatus });
+    }
+
+    const [totalRevenue, totalPaid, totalRemaining, totalExpenses] = await Promise.all([
+      baseConsignmentQuery
+        .clone()
+        .select('COALESCE(SUM(consignment.totalAmount), 0)', 'total')
+        .getRawOne(),
+      baseConsignmentQuery
+        .clone()
+        .select('COALESCE(SUM(consignment.paidAmount), 0)', 'total')
+        .getRawOne(),
+      baseConsignmentQuery
+        .clone()
+        .select('COALESCE(SUM(consignment.remainingAmount), 0)', 'total')
+        .getRawOne(),
+      this.expenseRepository
+        .createQueryBuilder('expense')
+        .select('COALESCE(SUM(expense.amount), 0)', 'total')
+        .where('expense.isActive = :isActive', { isActive: true })
+        .andWhere('expense.createdAt >= :startDate', { startDate })
+        .andWhere('expense.createdAt <= :endDate', { endDate })
+        .andWhere(branchId ? 'expense.branchId = :branchId' : '1=1', branchId ? { branchId } : {})
+        .getRawOne(),
+    ]);
+
+    const revenuAmount = Number(totalRevenue?.total) || 0;
+    const paidAmount = Number(totalPaid?.total) || 0;
+    const remainingAmount = Number(totalRemaining?.total) || 0;
+    const expensesAmount = Number(totalExpenses?.total) || 0;
+    const netProfit = revenuAmount - expensesAmount;
+
+    return {
+      totalRevenue: revenuAmount,
+      totalPaidAmount: paidAmount,
+      totalRemainingAmount: remainingAmount,
+      totalExpenses: expensesAmount,
+      netProfit,
+      toPayAmount: remainingAmount,
+    };
+  }
+
+  /**
+   * Get detailed revenue data for revenue management section
+   */
+  async getRevenueDetails(
+    dateFrom?: string,
+    dateTo?: string,
+    branchId?: string,
+    paymentStatus?: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    const startDate = dateFrom ? new Date(dateFrom) : new Date('2000-01-01');
+    const endDate = dateTo ? new Date(dateTo) : new Date();
+    const skip = (page - 1) * limit;
+
+    const query = this.consignmentRepository
+      .createQueryBuilder('consignment')
+      .leftJoinAndSelect('consignment.fromBranch', 'fromBranch')
+      .leftJoinAndSelect('consignment.toBranch', 'toBranch')
+      .where('consignment.isActive = :isActive', { isActive: true })
+      .andWhere('consignment.createdAt >= :startDate', { startDate })
+      .andWhere('consignment.createdAt <= :endDate', { endDate });
+
+    if (branchId) {
+      query.andWhere('consignment.fromBranchId = :branchId', { branchId });
+    }
+
+    if (paymentStatus) {
+      query.andWhere('consignment.paymentStatus = :paymentStatus', { paymentStatus });
+    }
+
+    const [data, total] = await query
+      .orderBy('consignment.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data: data.map((c) => ({
+        id: c.id,
+        biltyNumber: c.biltyNumber,
+        totalAmount: Number(c.totalAmount),
+        paidAmount: Number(c.paidAmount),
+        remainingAmount: Number(c.remainingAmount),
+        paymentStatus: c.paymentStatus,
+        bookingDate: c.createdAt,
+        deliveryDate: c.deliveredAt,
+        fromBranch: c.fromBranch?.name,
+        toBranch: c.toBranch?.name,
+      })),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * Get payment tracking data
+   */
+  async getPaymentTracking(
+    dateFrom?: string,
+    dateTo?: string,
+    branchId?: string,
+    paymentType?: string,
+    paymentMethod?: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    const startDate = dateFrom ? new Date(dateFrom) : new Date('2000-01-01');
+    const endDate = dateTo ? new Date(dateTo) : new Date();
+    const skip = (page - 1) * limit;
+
+    const query = this.paymentRepository
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.consignment', 'consignment')
+      .where('payment.isActive = :isActive', { isActive: true })
+      .andWhere('payment.createdAt >= :startDate', { startDate })
+      .andWhere('payment.createdAt <= :endDate', { endDate });
+
+    if (branchId) {
+      query.leftJoin('consignment.fromBranch', 'branch').andWhere('branch.id = :branchId', { branchId });
+    }
+
+    if (paymentType) {
+      query.andWhere('payment.type = :paymentType', { paymentType });
+    }
+
+    if (paymentMethod) {
+      query.andWhere('payment.method = :paymentMethod', { paymentMethod });
+    }
+
+    const [data, total] = await query
+      .orderBy('payment.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data: data.map((p) => ({
+        id: p.id,
+        consignmentId: p.consignmentId,
+        biltyNumber: p.consignment?.biltyNumber,
+        amount: Number(p.amount),
+        type: p.type,
+        method: p.method,
+        createdAt: p.createdAt,
+      })),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * Get profit and loss data for a given period
+   */
+  async getProfitAndLoss(
+    period: 'daily' | 'monthly' | 'custom' = 'daily',
+    dateFrom?: string,
+    dateTo?: string,
+    branchId?: string,
+  ) {
+    const startDate = dateFrom ? new Date(dateFrom) : new Date('2000-01-01');
+    const endDate = dateTo ? new Date(dateTo) : new Date();
+
+    const revenueQuery = this.consignmentRepository
+      .createQueryBuilder('consignment')
+      .select(
+        period === 'monthly'
+          ? 'TO_CHAR(consignment.createdAt, \'YYYY-MM\')'
+          : 'DATE(consignment.createdAt)',
+        'period',
+      )
+      .addSelect('COALESCE(SUM(consignment.totalAmount), 0)', 'revenue')
+      .where('consignment.isActive = :isActive', { isActive: true })
+      .andWhere('consignment.createdAt >= :startDate', { startDate })
+      .andWhere('consignment.createdAt <= :endDate', { endDate });
+
+    if (branchId) {
+      revenueQuery.andWhere('consignment.fromBranchId = :branchId', { branchId });
+    }
+
+    const revenueData = await revenueQuery
+      .groupBy(period === 'monthly' ? 'TO_CHAR(consignment.createdAt, \'YYYY-MM\')' : 'DATE(consignment.createdAt)')
+      .orderBy('period', 'ASC')
+      .getRawMany();
+
+    const expenseQuery = this.expenseRepository
+      .createQueryBuilder('expense')
+      .select(
+        period === 'monthly'
+          ? 'TO_CHAR(expense.createdAt, \'YYYY-MM\')'
+          : 'DATE(expense.createdAt)',
+        'period',
+      )
+      .addSelect('COALESCE(SUM(expense.amount), 0)', 'expenses')
+      .where('expense.isActive = :isActive', { isActive: true })
+      .andWhere('expense.createdAt >= :startDate', { startDate })
+      .andWhere('expense.createdAt <= :endDate', { endDate });
+
+    if (branchId) {
+      expenseQuery.andWhere('expense.branchId = :branchId', { branchId });
+    }
+
+    const expenseData = await expenseQuery
+      .groupBy(period === 'monthly' ? 'TO_CHAR(expense.createdAt, \'YYYY-MM\')' : 'DATE(expense.createdAt)')
+      .orderBy('period', 'ASC')
+      .getRawMany();
+
+    const expenseMap = new Map<string, number>();
+    for (const row of expenseData) {
+      expenseMap.set(String(row.period), Number(row.expenses) || 0);
+    }
+
+    return revenueData.map((row) => {
+      const revenue = Number(row.revenue) || 0;
+      const expenses = expenseMap.get(String(row.period)) || 0;
+      return {
+        period: row.period,
+        revenue,
+        expenses,
+        profit: revenue - expenses,
+      };
+    });
+  }
+
+  /**
+   * Get cash flow management data
+   */
+  async getCashFlow(
+    dateFrom?: string,
+    dateTo?: string,
+    branchId?: string,
+  ) {
+    const startDate = dateFrom ? new Date(dateFrom) : new Date('2000-01-01');
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = dateTo ? new Date(dateTo) : new Date();
+    endDate.setHours(23, 59, 59, 999);
+
+    // Cash In = Payments received
+    const cashInQuery = this.paymentRepository
+      .createQueryBuilder('payment')
+      .select("CAST(payment.createdAt AS date)", 'date')
+      .addSelect('COALESCE(SUM(payment.amount), 0)', 'amount')
+      .where('payment.isActive = :isActive', { isActive: true })
+      .andWhere('payment.createdAt >= :startDate', { startDate })
+      .andWhere('payment.createdAt <= :endDate', { endDate });
+
+    if (branchId) {
+      cashInQuery.leftJoin('payment.consignment', 'consignment').andWhere('consignment.fromBranchId = :branchId', {
+        branchId,
+      });
+    }
+
+    const cashInData = await cashInQuery.groupBy('CAST(payment.createdAt AS date)').orderBy('date', 'ASC').getRawMany();
+
+    // Cash Out = Expenses
+    const cashOutQuery = this.expenseRepository
+      .createQueryBuilder('expense')
+      .select("CAST(expense.createdAt AS date)", 'date')
+      .addSelect('COALESCE(SUM(expense.amount), 0)', 'amount')
+      .where('expense.isActive = :isActive', { isActive: true })
+      .andWhere('expense.createdAt >= :startDate', { startDate })
+      .andWhere('expense.createdAt <= :endDate', { endDate });
+
+    if (branchId) {
+      cashOutQuery.andWhere('expense.branchId = :branchId', { branchId });
+    }
+
+    const cashOutData = await cashOutQuery.groupBy('CAST(expense.createdAt AS date)').orderBy('date', 'ASC').getRawMany();
+
+    // Calculate cumulative balance
+    const cashInMap = new Map<string, number>();
+    const cashOutMap = new Map<string, number>();
+
+    const formatDateKey = (d: any) => {
+      if (d instanceof Date) return d.toISOString().split('T')[0];
+      return String(d).split('T')[0];
+    };
+
+    for (const row of cashInData) {
+      cashInMap.set(formatDateKey(row.date), Number(row.amount) || 0);
+    }
+
+    for (const row of cashOutData) {
+      cashOutMap.set(formatDateKey(row.date), Number(row.amount) || 0);
+    }
+
+    // Only include dates that have data
+    const allDates = new Set<string>([...cashInMap.keys(), ...cashOutMap.keys()]);
+
+    let runningBalance = 0;
+    const cashFlowData = Array.from(allDates)
+      .sort()
+      .map((dateStr) => {
+        const cashIn = cashInMap.get(dateStr) || 0;
+        const cashOut = cashOutMap.get(dateStr) || 0;
+        runningBalance += cashIn - cashOut;
+        return {
+          date: dateStr,
+          openingBalance: runningBalance - (cashIn - cashOut),
+          cashIn,
+          cashOut,
+          closingBalance: runningBalance,
+        };
+      });
+
+    return cashFlowData;
+  }
+
+  /**
+   * Get summary totals for cash flow
+   */
+  async getCashFlowSummary(
+    dateFrom?: string,
+    dateTo?: string,
+    branchId?: string,
+  ) {
+    const startDate = dateFrom ? new Date(dateFrom) : new Date('2000-01-01');
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = dateTo ? new Date(dateTo) : new Date();
+    endDate.setHours(23, 59, 59, 999);
+
+    const [totalCashIn, totalCashOut] = await Promise.all([
+      (() => {
+        const q = this.paymentRepository
+          .createQueryBuilder('payment')
+          .select('COALESCE(SUM(payment.amount), 0)', 'total')
+          .where('payment.isActive = :isActive', { isActive: true })
+          .andWhere('payment.createdAt >= :startDate', { startDate })
+          .andWhere('payment.createdAt <= :endDate', { endDate });
+        if (branchId) {
+          q.leftJoin('payment.consignment', 'consignment')
+            .andWhere('consignment.fromBranchId = :branchId', { branchId });
+        }
+        return q.getRawOne();
+      })(),
+      (() => {
+        const q = this.expenseRepository
+          .createQueryBuilder('expense')
+          .select('COALESCE(SUM(expense.amount), 0)', 'total')
+          .where('expense.isActive = :isActive', { isActive: true })
+          .andWhere('expense.createdAt >= :startDate', { startDate })
+          .andWhere('expense.createdAt <= :endDate', { endDate });
+        if (branchId) {
+          q.andWhere('expense.branchId = :branchId', { branchId });
+        }
+        return q.getRawOne();
+      })(),
+    ]);
+
+    const cashIn = Number(totalCashIn?.total) || 0;
+    const cashOut = Number(totalCashOut?.total) || 0;
+
+    return {
+      openingBalance: 0, // This would need to be tracked separately
+      totalCashIn: cashIn,
+      totalCashOut: cashOut,
+      closingBalance: cashIn - cashOut,
+    };
+  }
 }
